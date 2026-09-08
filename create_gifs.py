@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate animated GIFs for Random, NN, and Heuristic policies."""
+"""Generate animated GIFs for all three policies with time pressure."""
 import numpy as np
 import random
 import imageio
@@ -11,109 +11,102 @@ os.chdir('/Users/djohnson334/neurosymbolic-game-ai')
 import joblib
 model = joblib.load('game_model.joblib')
 
-# Load heuristics
-import importlib.util
-spec = importlib.util.spec_from_file_location("heuristics", "/Users/djohnson334/neurosymbolic-game-ai/heuristics.py")
-heur_mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(heur_mod)
+# Simple heuristic for comparison
+def heuristic_policy(state):
+    board = state[:1024]
+    px, py = int(state[1024] * 32), int(state[1025] * 32)
+    
+    # Find nearest green and red boxes
+    greens = [(i % 32, i // 32) for i, v in enumerate(board) if v > 0]
+    reds = [(i % 32, i // 32) for i, v in enumerate(board) if v < 0]
+    
+    if greens and (not reds or random.random() > 0.3):
+        gx, gy = min(greens, key=lambda b: (b[0]-px)**2 + (b[1]-py)**2)
+        if gx < px: return 2  # LEFT
+        if gx > px: return 3  # RIGHT
+        if gy < py: return 0  # UP
+        return 1  # DOWN
+    
+    if reds:
+        return random.choice([2, 3])  # Move horizontally to avoid
+    
+    return random.choice([0, 1, 2, 3])
 
-def run_game_visual(seed, policy_type, max_frames=100):
-    """Run game and return frames for visualization."""
+def create_gif(filename, policy, seed=42, frames=64):
+    """Create animation of agent gameplay."""
     random.seed(seed)
     np.random.seed(seed)
     
     x, y = 16, 16
-    frames = []
-    cg, cr = set(), set()
-    collected_order_green = []
-    collected_order_red = []
-    
     green = {(random.randint(0,31), random.randint(0,31)) for _ in range(5)}
     red = {(random.randint(0,31), random.randint(0,31)) for _ in range(5)}
+    cg, cr = set(), set()
+    reward = 100
+    score = 0
     
-    # Ensure no overlap
-    green -= red
-    red -= green
-    while len(green) < 5: green.add((random.randint(0,31), random.randint(0,31)))
-    while len(red) < 5: red.add((random.randint(0,31), random.randint(0,31)))
+    frames_list = []
     
-    def make_frame():
-        frame = np.zeros((64, 64, 3), dtype=np.uint8)
-        # Green boxes (collected ones fade)
-        for bx, by in green - cg:
-            frame[by*2+10:(by+1)*2+10, bx*2+10:(bx+1)*2+10] = [0, 200, 0]
-        for bx, by in cg:
-            frame[by*2+10:(by+1)*2+10, bx*2+10:(bx+1)*2+10] = [100, 150, 100]
-        # Red boxes
-        for bx, by in red - cr:
-            frame[by*2+10:(by+1)*2+10, bx*2+10:(bx+1)*2+10] = [200, 0, 0]
-        # Collected red
-        for bx, by in cr:
-            frame[by*2+10:(by+1)*2+10, bx*2+10:(bx+1)*2+10] = [150, 100, 100]
-        # Agent
-        frame[y*2+12:(y+1)*2+12, x*2+12:(x+1)*2+12] = [0, 0, 255]
-        return frame
-    
-    frames.append(make_frame())
-    done = False
-    
-    while not done and len(frames) < max_frames:
+    for step in range(frames):
+        # Create frame (32x32 grid)
+        frame = np.zeros((32, 32, 3), dtype=np.uint8)
+        # Empty = black
+        # Green = green
+        for gx, gy in green:
+            if (gx, gy) not in cg:
+                frame[gy, gx] = [0, 255, 0]
+        # Red = red
+        for rx, ry in red:
+            if (rx, ry) not in cr:
+                frame[ry, rx] = [255, 0, 0]
+        # Agent = blue
+        frame[y, x] = [0, 0, 255]
+        
+        frames_list.append(frame)
+        
+        if reward <= 0:
+            break
+            
         # Build state
-        gn = int((x, y-1) in green and (x, y-1) not in cg)
-        gs = int((x, y+1) in green and (x, y+1) not in cg)
-        ge = int((x+1, y) in green and (x+1, y) not in cg)
-        gw = int((x-1, y) in green and (x-1, y) not in cg)
-        rn = int((x, y-1) in red and (x, y-1) not in cr)
-        rs = int((x, y+1) in red and (x, y+1) not in cr)
-        re = int((x+1, y) in red and (x+1, y) not in cr)
-        rw = int((x-1, y) in red and (x-1, y) not in cr)
-        remaining = len(green) - len(cg)
+        board = np.zeros(1024)
+        for gx, gy in green:
+            if (gx, gy) not in cg: board[gy*32+gx] = 1
+        for rx, ry in red:
+            if (rx, ry) not in cr: board[ry*32+rx] = -1
+        state = np.concatenate([board, [x/32, y/32]])
         
-        state = np.array([x/32, y/32, gn, gs, ge, gw, rn, rs, re, rw, remaining], dtype=np.float32)
+        # Select action by policy
+        if policy == 'random':
+            a = random.randint(0, 3)
+        elif policy == 'nn':
+            a = int(model.predict([state])[0])
+        else:  # heuristic
+            a = heuristic_policy(state)
         
-        if policy_type == 'random':
-            action = random.randint(0, 3)
-        elif policy_type == 'heuristic':
-            action = heur_mod.behavior(state)
-        else:  # nn
-            action = model.predict(state.reshape(1, -1))[0]
-        
-        dx, dy = {0:(0,-1), 1:(0,1), 2:(-1,0), 3:(1,0)}[action]
-        x = max(0, min(31, x + dx))
-        y = max(0, min(31, y + dy))
+        dx, dy = {0:(0,-1), 1:(0,1), 2:(-1,0), 3:(1,0)}[a]
+        old_x, old_y = x, y
+        x = max(0, min(31, x+dx))
+        y = max(0, min(31, y+dy))
         
         if (x, y) in green and (x, y) not in cg:
+            score += reward
             cg.add((x, y))
-            collected_order_green.append((x, y))
         elif (x, y) in red and (x, y) not in cr:
+            score -= reward
             cr.add((x, y))
-            collected_order_red.append((x, y))
         
-        if len(cg) >= len(green):
-            done = True
-        
-        frames.append(make_frame())
+        reward -= 1
     
-    return frames
+    # Save GIF
+    imageio.mimsave(filename, frames_list, fps=10)
+    return score
 
-print("Generating animations...")
-
-# Random
+print("Creating GIFs...")
 print("Random policy...")
-rf = run_game_visual(42, 'random')
-imageio.mimsave('random.gif', rf, fps=4)
-print(f"  {len(rf)} frames")
-
-# Neural Network
+s1 = create_gif('random.gif', 'random')
 print("NN policy...")
-nf = run_game_visual(43, 'nn')
-imageio.mimsave('nn_policy.gif', nf, fps=4)
-print(f"  {len(nf)} frames")
-
-# Heuristic
+s2 = create_gif('nn_policy.gif', 'nn')
 print("Heuristic policy...")
-hf = run_game_visual(44, 'heuristic')
-imageio.mimsave('heuristic.gif', hf, fps=4)
-print(f"  {len(hf)} frames")
+s3 = create_gif('heuristic.gif', 'heuristic')
 
-print("\nDone! Created: random.gif, nn_policy.gif, heuristic.gif")
+print(f"\nScores: Random={s1:.1f}, NN={s2:.1f}, Heuristic={s3:.1f}")
+print("GIFs created!")
