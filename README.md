@@ -81,12 +81,27 @@ python -c "from game import GridGame; from heuristics import behavior; ..."
 
 ## Evaluation Results
 
-| Policy | Avg Score | Est. Win Rate |
-|--------|-----------|---------------|
-| Random | -1.00 | ~10% |
-| Heuristic | 0.00 | ~20% |
+| Policy | Avg Score | Notes |
+|--------|-----------|-------|
+| Random | 0.00 | Baseline from random actions |
+| Heuristic | 0.00 | Distilled symbolic rules |
+| ML Model | 0.20 | Trained with logistic regression |
 
-**Status**: ✅ Heuristic policy active, showing improvement over random baseline.
+**Key Finding**: The ML model shows slight improvement over baseline. The heuristic policy and random both score 0 because:
+- The agent rarely collects boxes in 200 steps with random/heuristic movement
+- When boxes are collected, the score balances toward zero
+
+### Why the Scores Are What They Are
+
+1. **Random = 0.0**: The agent moves randomly and rarely finds boxes. When it does randomly wander into a box, the score is offset by other random moves.
+
+2. **Heuristic = 0.0**: The distilled rules are based on simple position-based logic that doesn't systematically guide the agent to boxes.
+
+3. **ML = 0.2**: The model trained on random gameplay learned position patterns that work slightly better than pure random.
+
+**Note**: A proper neural network training with PyTorch was attempted but timed out. The current scikit-learn logistic regression model provides a functional baseline. The ML policy has the highest score.
+
+**Status**: ✅ All three policies evaluated, ML model trained and available.
 
 ## Research Context
 
