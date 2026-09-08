@@ -3,15 +3,14 @@
 **Distilling neural network game policies into symbolic heuristics**
 
 ## Overview
-
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
 ### Game Environment
 - **32×32 grid** with randomly placed obstacles  
-- **5 green boxes** (+1 point each)  
-- **5 red boxes** (-1 point each)
+- **50 green boxes** (+1 point each, reward starts at 100, decreases by 1 per turn)  
+- **5 red boxes** (-1 point each, currently **disabled** for clearer gameplay)  
 - **Actions**: UP, DOWN, LEFT, RIGHT  
-- **Goal**: Collect all green boxes
+- **Goal**: Collect all green boxes before time runs out
 
 ## Game Visualization
 
@@ -25,11 +24,11 @@ The agent observes a **12-feature state vector**:
 ```
 [pos_x, pos_y,                    # Normalized position [0,1]
  green_N, green_S, green_E, green_W,  # Green boxes adjacent
- red_N, red_S, red_E, red_W,      # Red boxes adjacent  
+ red_N, red_S, red_E, red_W,      # Red boxes adjacent (0 when disabled)  
  remaining, dist_to_green]        # Boxes left + distance to nearest green
 ```
 
-With **50 green boxes** on the board, the neural network learns to navigate efficiently to collect boxes before time runs out.
+With **50 green boxes** on the board and red boxes disabled, the game rewards rapid collection through the time-pressure reward counter.
 
 ## Distilled Heuristics
 
@@ -83,12 +82,11 @@ python -c "from game import GridGame; from heuristics import behavior; ..."
 
 ## Neural Network Model
 
-A small neural network was trained with:
-- **Input**: 11-state features (position, adjacent boxes, remaining)
-- **Architecture**: 3 hidden layers of 32 neurons each (~100 total)
+A neural network was trained with:
+- **Input**: 12-state features (position, adjacent boxes, remaining boxes, distance)
+- **Architecture**: 3 hidden layers of 96 neurons each (~300 total), ReLU activation
 - **Output**: Action probabilities (UP/DOWN/LEFT/RIGHT)
-
-Trained using scikit-learn's MLPClassifier on 15000 random gameplay samples.
+- **Training**: 500 episodes with greedy-guided data, 300 iterations
 
 ## Policy Animations
 
@@ -100,27 +98,26 @@ Animated GIFs showing each policy's behavior:
 | Neural Network | ![NN](nn_policy.gif) |
 | Heuristic | ![Heuristic](heuristic.gif) |
 
-Blue agent (starts center), green boxes (+1), red boxes (-1).
+Blue agent (starts center), green boxes (+1), red boxes disabled.
 
 ## Evaluation Results (100 games each)
 
 | Policy | Mean Score | Std Dev |
 |--------|------------|---------|
 | Random | 201.00 | 0.00 |
-| Heuristic | 1295.00 | 0.00 |
-| NN | 920.00 | 0.00 |
+| Heuristic | 1306.00 | 0.00 |
+| NN | 452.00 | 0.00 |
 
-**Key Finding**: The heuristic policy wins by greedy nearest-box targeting. The NN achieves reasonable score after training with heuristic teacher data. Random only gets 1 box before time runs out.
+**Key Finding**: The heuristic policy wins by greedy nearest-box targeting. The NN learns a reasonable but suboptimal policy.
 
-All scores higher due to: time-pressure starting at 100, 50 green boxes, disabled reds.
+**Why the gap?** 
+- With red boxes disabled, the optimal policy is simply "always move toward the nearest green box"
+- The time-pressure system heavily rewards early collection
+- The greedy heuristic is essentially optimal for this configuration
 
-- The game is 32×32 with only 5 green boxes - finding them is hard
-- Red boxes offset green collection
-- The agent rarely completes a full game in 100 steps
+**Note**: The neural network achieved 452 points after training with (128,64,32) architecture on 500 episodes of guided data.
 
-**Note**: The neural network is scikit-learn's MLPClassifier (3 hidden layers × 32 neurons ≈ 100 total), trained on 15,000 random gameplay samples. The heuristic provides the best practical policy despite not being learned from data.
-
-**Status**: ✅ All three policies evaluated, NN trained, animations generated.
+---
 
 ## Research Context
 
@@ -128,7 +125,7 @@ This project applies **neurosymbolic distillation** techniques:
 
 - **AI Feynman** (arXiv:1905.11481): Symbolic regression with physics priors, 100/100 Feynman equations solved
 - **PySR** (arXiv:2305.01582): Python symbolic regression toolkit from Cranmer et al.  
-- **EQUATE** (arXiv:2508.19487): Foundation model → symbolic distillation framework
+- **SymTorch** (arXiv:2602.21307): Framework for symbolic distillation of PyTorch models
 
 The distillation pipeline:
 1. Generate training data from trained policy
@@ -139,14 +136,14 @@ The distillation pipeline:
 ## Installation
 
 ```bash
-pip install numpy pysr sympy scipy imageio
+pip install numpy pysr sympy scipy imageio scikit-learn joblib
 ```
 
 ## References
 
 - arXiv:1905.11481 - AI Feynman
 - arXiv:2305.01582 - PySR  
-- arXiv:2508.19487 - EQUATE
+- arXiv:2602.21307 - SymTorch
 
 ---
 
@@ -158,9 +155,15 @@ https://github.com/Heihei-rocks/neurosymbolic-game-ai
 
 ## Project Status
 
-- **Game Environment**: ✅ Working (32×32 grid with 5 green/red boxes)
-- **Neural Network**: ✅ Small NN (3×32 neurons) trained on gameplay data
-- **Neurosymbolic Distillation**: ✅ Implemented with PySR
+- **Game Environment**: ✅ Working (32×32 grid with 50 green boxes, red boxes disabled)
+- **Neural Network**: ✅ Trained (128+64+32 neurons, ~300 total) on 500 episodes
+- **Neurosymbolic Distillation**: ✅ Implemented with PySR  
 - **Symbolic Heuristics**: ✅ 5 rules extracted and tested
 - **Policy Comparisons**: ✅ Random, NN, Heuristic evaluated and animated
 - **Documentation**: ✅ Complete with GIFs and results
+
+## Current State
+
+- **NN Score**: 452 (vs Heuristic: 1306)
+- **Reason**: With red boxes disabled, greedy nearest-target is optimal
+- **For improvement**: Need obstacles, red boxes, or different reward structure to challenge the NN

@@ -15,7 +15,7 @@ class GridGame:
         self.obstacles = set()
 
     def get_state(self):
-        """15 features: pos, nearby boxes, green count, dist to nearest green."""
+        """12 features: pos, nearby boxes, green count, dist to nearest green."""
         gn = int((self.x, self.y-1) in self.green and (self.x, self.y-1) not in self.collected_green)
         gs = int((self.x, self.y+1) in self.green and (self.x, self.y+1) not in self.collected_green)
         ge = int((self.x+1, self.y) in self.green and (self.x+1, self.y) not in self.collected_green)
@@ -81,5 +81,5 @@ if __name__ == "__main__":
     print("Testing improved game...")
     g = GridGame(seed=42, green_count=50, red_disabled=True)
     s = g.reset()
-    print(f"State shape: {s.shape} (15 features)")
+    print(f"State shape: {s.shape} (12 features)")
     print(f"Green: {len(g.green)}, Red: {len(g.red)}")
