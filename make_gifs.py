@@ -1,103 +1,60 @@
 #!/usr/bin/env python3
-"""Generate simple GIFs using PIL."""
-import numpy as np, random
+"""Create animated GIFs for all three policies."""
+import numpy as np, random, os, imageio
 from PIL import Image, ImageDraw
-import imageio
-import os
+import sys
+sys.path.insert(0, '/Users/djohnson334/neurosymbolic-game-ai')
 
-os.chdir('/Users/djohnson334/neurosymbolic-game-ai')
-
-# Load model
 import joblib
-try:
-    model = joblib.load('game_model.joblib')
-except:
-    from sklearn.neural_network import MLPClassifier
-    model = MLPClassifier(hidden_layer_sizes=(16,16))
+model = joblib.load('game_model.joblib')
+from game import GridGame
 
-def hex_to_rgb(h):
-    return tuple(int(h[i:i+2], 16) for i in (1, 3, 5))
-
-def make_simple_gif(filename, policy, seed):
+def make_gif(filename, policy, seed):
     random.seed(seed); np.random.seed(seed)
-    x, y, cg, cr = 16, 16, set(), set()
-    green = [(rx, ry) for rx, ry in [(random.randint(0,31), random.randint(0,31)) for _ in range(5)]]
-    red = [(rx, ry) for rx, ry in [(random.randint(0,31), random.randint(0,31)) for _ in range(5)]]
-    
-    # Ensure no overlap
-    overlap = set(green) & set(red)
-    for ox, oy in overlap:
-        green.remove((ox, oy)) if (ox, oy) in green else red.remove((ox, oy))
-    while len(green) < 5: green.append((random.randint(0,31), random.randint(0,31)))
-    while len(red) < 5: red.append((random.randint(0,31), random.randint(0,31)))
+    g = GridGame(seed=seed, green_count=50, red_disabled=True)
+    g.reset()
     
     frames = []
-    reward = 100
     
-    for step in range(48):
-        if reward <= 0: break
+    for step in range(40):
+        if g.done: break
         
-        # Create frame: 64x64 pixels per cell, 32x32 cells = 2048x2048
-        img = Image.new('RGB', (640, 640), 'black')
+        img = Image.new('RGB', (400, 400), 'black')
         draw = ImageDraw.Draw(img)
         
-        # Draw boxes
-        for gx, gy in green:
-            if (gx, gy) not in cg:
-                draw.rectangle([gx*20+2, gy*20+2, gx*20+18, gy*20+18], fill='green')
-        for rx, ry in red:
-            if (rx, ry) not in cr:
-                draw.rectangle([rx*20+2, ry*20+2, rx*20+18, ry*20+18], fill='red')
+        # Draw grid with boxes
+        for gx, gy in g.green:
+            if (gx, gy) not in g.collected_green:
+                cx, cy = gx*10 + 20, gy*10 + 20
+                draw.ellipse([cx, cy, cx+8, cy+8], fill='green')
         
-        # Draw agent
-        draw.rectangle([x*20+5, y*20+5, x*20+15, y*20+15], fill='blue')
+        # Agent
+        ax, ay = g.x*10+20, g.y*10+20
+        draw.ellipse([ax, ay, ax+10, ay+10], fill='blue')
         
         frames.append(np.array(img))
         
         # Get action
-        gn = int((x, y-1) in green and (x, y-1) not in cg)
-        gs = int((x, y+1) in green and (x, y+1) not in cg)
-        ge = int((x+1, y) in green and (x+1, y) not in cg)
-        gw = int((x-1, y) in green and (x-1, y) not in cg)
-        rn = int((x, y-1) in red and (x, y-1) not in cr)
-        rs = int((x, y+1) in red and (x, y+1) not in cr)
-        re = int((x+1, y) in red and (x+1, y) not in cr)
-        rw = int((x-1, y) in red and (x-1, y) not in cr)
-        state = [x/32, y/32, gn, gs, ge, gw, rn, rs, re, rw, 5-len(cg)]
-        
-        if policy == 'random': a = random.randint(0,3)
+        if policy == 'random':
+            a = random.randint(0,3)
         elif policy == 'heuristic':
-            # Simple heuristic: move toward nearest green
-            greens = [(gx, gy) for gx, gy in green if (gx, gy) not in cg]
-            reds = [(rx, ry) for rx, ry in red if (rx, ry) not in cr]
+            greens = [(gx, gy) for gx, gy in g.green if (gx, gy) not in g.collected_green]
+            a = random.randint(0,3)
             if greens:
-                gx, gy = min(greens, key=lambda b: (b[0]-x)**2 + (b[1]-y)**2)
-                if gx < x: a = 2  # LEFT
-                elif gx > x: a = 3  # RIGHT
-                elif gy < y: a = 0  # UP
-                else: a = 1  # DOWN
-            else:
-                a = random.randint(0,3)
+                gx, gy = min(greens, key=lambda b: (b[0]-g.x)**2 + (b[1]-g.y)**2)
+                a = 2 if gx < g.x else (3 if gx > g.x else (0 if gy < g.y else 1))
         else:
-            a = model.predict([state])[0]
+            a = model.predict([g.get_state()])[0]
         
-        dx, dy = {0:(0,-1),1:(0,1),2:(-1,0),3:(1,0)}[a]
-        old_x, old_y = x, y
-        x = max(0, min(31, x+dx))
-        y = max(0, min(31, y+dy))
-        
-        if (x, y) in green and (x, y) not in cg:
-            cg.add((x, y))
-        elif (x, y) in red and (x, y) not in cr:
-            cr.add((x, y))
-        
-        reward -= 1
+        g.step(a)
     
-    imageio.mimsave(filename, frames, fps=10)
-    return len(cg) - len(cr)
+    imageio.mimsave(filename, frames, fps=8)
+    return g.score
 
-print("Creating GIFs with PIL...")
-print("Random:", make_simple_gif('random.gif', 'random', 42))
-print("NN:", make_simple_gif('nn_policy.gif', 'nn', 43))
-print("Heuristic:", make_simple_gif('heuristic.gif', 'heuristic', 44))
+os.chdir('/Users/djohnson334/neurosymbolic-game-ai')
+
+print("Creating GIFs...")
+print("Random:", make_gif('random.gif', 'random', 42))
+print("NN:", make_gif('nn_policy.gif', 'nn', 43))
+print("Heuristic:", make_gif('heuristic.gif', 'heuristic', 44))
 print("Done!")
