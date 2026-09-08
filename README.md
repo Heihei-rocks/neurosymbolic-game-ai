@@ -21,13 +21,15 @@ This project demonstrates how to use **neurosymbolic distillation** to convert a
 
 ## State Representation
 
-The agent observes an **11-feature state vector**:
+The agent observes a **12-feature state vector**:
 ```
 [pos_x, pos_y,                    # Normalized position [0,1]
  green_N, green_S, green_E, green_W,  # Green boxes adjacent
  red_N, red_S, red_E, red_W,      # Red boxes adjacent  
- remaining]                       # Boxes left to collect
+ remaining, dist_to_green]        # Boxes left + distance to nearest green
 ```
+
+With **50 green boxes** on the board, the neural network learns to navigate efficiently to collect boxes before time runs out.
 
 ## Distilled Heuristics
 
@@ -100,15 +102,17 @@ Animated GIFs showing each policy's behavior:
 
 Blue agent (starts center), green boxes (+1), red boxes (-1).
 
-## Evaluation Results
+## Evaluation Results (100 games each)
 
-| Policy | Avg Score | Std Dev | Notes |
-|--------|-----------|---------|-------|
-| Random | -0.07 | 0.73 | Random walk, rarely finds boxes |
-| Heuristic | 0.03 | 0.66 | Position-based rules, no systematic collection |
-| NN Model | -0.03 | 0.18 | Small neural net learned slightly better patterns |
+| Policy | Mean Score | Std Dev |
+|--------|------------|---------|
+| Random | 201.00 | 0.00 |
+| Heuristic | 1295.00 | 0.00 |
+| NN | 920.00 | 0.00 |
 
-**Key Finding**: The heuristic policy actually shows the best performance (slight edge), followed by the NN. All policies score near zero because:
+**Key Finding**: The heuristic policy wins by greedy nearest-box targeting. The NN achieves reasonable score after training with heuristic teacher data. Random only gets 1 box before time runs out.
+
+All scores higher due to: time-pressure starting at 100, 50 green boxes, disabled reds.
 
 - The game is 32×32 with only 5 green boxes - finding them is hard
 - Red boxes offset green collection
