@@ -116,4 +116,16 @@ pip install numpy pysr sympy scipy imageio
 
 ---
 
-Created using neurosymbolic distillation. Status: **Working prototype** ✅
+**Created using neurosymbolic distillation. Live on GitHub!**
+
+## GitHub Repository
+
+https://github.com/Heihei-rocks/neurosymbolic-game-ai
+
+## Project Status
+
+- **Game Environment**: ✅ Working
+- **Neurosymbolic Distillation**: ✅ Implemented with PySR
+- **Symbolic Heuristics**: ✅ 5 rules extracted and tested
+- **Evaluation**: ✅ Heuristic policy outperforms random baseline
+- **Documentation**: ✅ Complete README with rules explained
