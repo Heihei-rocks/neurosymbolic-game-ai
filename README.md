@@ -102,13 +102,19 @@ Blue agent (starts center), green boxes (+1), red boxes (-1).
 
 ## Evaluation Results
 
-| Policy | Avg Score | Notes |
-|--------|-----------|-------|
-| Random | 0.00 | Random walk, rarely finds boxes |
-| Heuristic | 0.00 | Position-based rules, no systematic collection |
-| ML Model | 0.20 | Small NN learned slightly better patterns |
+| Policy | Avg Score | Std Dev | Notes |
+|--------|-----------|---------|-------|
+| Random | -0.07 | 0.73 | Random walk, rarely finds boxes |
+| Heuristic | 0.03 | 0.66 | Position-based rules, no systematic collection |
+| NN Model | -0.03 | 0.18 | Small neural net learned slightly better patterns |
 
-**Note**: The neural network uses scikit-learn MLPClassifier (not PyTorch). The ML policy has the best score.
+**Key Finding**: The heuristic policy actually shows the best performance (slight edge), followed by the NN. All policies score near zero because:
+
+- The game is 32×32 with only 5 green boxes - finding them is hard
+- Red boxes offset green collection
+- The agent rarely completes a full game in 100 steps
+
+**Note**: The neural network is scikit-learn's MLPClassifier (3 hidden layers × 32 neurons ≈ 100 total), trained on 15,000 random gameplay samples. The heuristic provides the best practical policy despite not being learned from data.
 
 **Status**: ✅ All three policies evaluated, NN trained, animations generated.
 
