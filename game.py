@@ -74,7 +74,7 @@ class GridGame:
 
 def generate_data(n_eps=50):
     """Generate state-action pairs from random play."""
-    states, actions = [], []
+    states, actions, rewards = [], [], []
     for seed in range(n_eps):
         g = GridGame(seed=seed)
         s = g.reset()
@@ -84,9 +84,14 @@ def generate_data(n_eps=50):
             ns, r, d, _ = g.step(a)
             states.append(s)
             actions.append(a)
+            rewards.append(r)
             s = ns
             steps += 1
-    return np.array(states), np.array(actions)
+    return np.array(states), np.array(actions), np.array(rewards)
+
+
+# Alias for compatibility
+generate_training_data = generate_data
 
 
 if __name__ == "__main__":
@@ -99,8 +104,8 @@ if __name__ == "__main__":
         s, r, d, _ = g.step(1)  # DOWN
     print(f"Score: {g.score}")
     
-    print("\nGenerating data...")
-    states, actions = generate_data(30)
+    print("Generating data...")
+    states, actions, rewards = generate_data(30)
     print(f"Generated: {states.shape}")
     
     print("Done!")

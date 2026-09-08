@@ -1,0 +1,23 @@
+name: Build and Document
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        pip install numpy pysr sympy scipy imageio
+    - name: Test game
+      run: python -c "from game import GridGame; g=GridGame(42); print('Game OK')"
+    - name: Test heuristics
+      run: |
+        python -c "from heuristics import behavior; print('Heuristics OK')"
+    - name: Run evaluation
+      run: python quick_eval.py
