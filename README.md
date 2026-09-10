@@ -27,7 +27,7 @@ This project demonstrates how to use **neurosymbolic distillation** to convert a
 
 ## Game Visualization
 
-![Game Board](game_visualization.png)
+![Game Board](output/game_visualization.png)
 
 *Grid showing agent start (blue), green boxes (+1), red boxes (-1), and obstacles*
 
@@ -45,7 +45,7 @@ With **50 green boxes** on the board and red boxes disabled, the game rewards ra
 
 ## Distilled Heuristics
 
-The `behavior(state)` function in `heuristics.py` contains 5 neurosymbolic rules:
+The `behavior(state)` function in `src/heuristics.py` contains 5 neurosymbolic rules:
 
 ```python
 def behavior(state):
@@ -77,20 +77,11 @@ def behavior(state):
 4. **Avoid Red**: Shift Right to bypass red boxes North of agent
 5. **Fallback**: Default Down movement for steady progress
 
-## Files
-
-| File | Description |
-|------|-------------|
-| `game.py` | 32×32 grid game environment |
-| `heuristics.py` | Distilled symbolic policy (`behavior()`) |
-| `distill.py` | Neurosymbolic distillation pipeline |
-| `evaluate.py` | Compare policy performances |
-
 ## Usage
 
 ```bash
 # Run the game with distilled heuristics
-python -c "from game import GridGame; from heuristics import behavior; ..."
+python src/game.py
 ```
 
 ## Neural Network Model
@@ -100,18 +91,25 @@ A neural network was trained with:
 - **Architecture**: 3 hidden layers of **128, 64, 32 neurons** - **224 total neurons** (approximately 300 parameters total)
 - **Output**: Action probabilities (UP/DOWN/LEFT/RIGHT)
 - **Training**: 500 episodes with greedy-guided data, 300 iterations
+- **Model Location**: `src/game_model.joblib`
 
 ## Policy Animations
 
-Animated GIFs showing each policy's behavior:
+Animated GIFs showing each policy's behavior with score tallies:
 
-| Policy | Animation |
-|--------|-----------|
-| Random | ![Random](random.gif) |
-| Neural Network | ![NN](nn_policy.gif) |
-| Heuristic | ![Heuristic](heuristic.gif) |
+### Latest Version (v0.10 alpha)
 
-Blue agent (starts center), green boxes (+1), red boxes disabled.
+The GIFs below show the **most recent** version with score animations:
+
+| Policy | Animation | Score Range |
+|--------|-----------|-------------|
+| Random | ![Random](output/12.02_random.gif) | ~201 |
+| Neural Network | ![NN](output/12.02_nn.gif) | ~452 |
+| Heuristic | ![Heuristic](output/12.02_heuristic.gif) | ~1306 |
+
+*Blue agent (starts center), green boxes (+1), red boxes disabled. Score counter in top-left, pop-up score annotations appear when boxes collected.*
+
+**Version Naming**: GIFs are named with commit count version (e.g., `12.02_random.gif`) for progress tracking
 
 ## Evaluation Results (100 games each)
 
@@ -166,13 +164,30 @@ pip install numpy pysr sympy scipy imageio scikit-learn joblib
 
 https://github.com/Heihei-rocks/neurosymbolic-game-ai
 
+## Project Structure
+
+```
+neurosymbolic-game-ai/
+├── src/                    # Source code
+│   ├── game.py
+│   ├── heuristics.py
+│   ├── train_model.py
+│   ├── make_gifs_scored.py
+│   └── *.joblib
+├── output/                 # Generated outputs
+│   ├── *.gif              # Policy animations with scores
+│   └── game_visualization.png
+├── README.md
+└── NEUROSYMBOLIC_RESEARCH.md
+```
+
 ## Project Status
 
 - **Game Environment**: ✅ Working (32×32 grid with 50 green boxes, red boxes disabled)
 - **Neural Network**: ✅ Trained (128+64+32 neurons, ~224 total) on 500 episodes
 - **Neurosymbolic Distillation**: ✅ Implemented with PySR  
 - **Symbolic Heuristics**: ✅ 5 rules extracted and tested
-- **Policy Comparisons**: ✅ Random, NN, Heuristic evaluated and animated
+- **Policy Comparisons**: ✅ Random, NN, Heuristic evaluated and animated with scores
 - **Documentation**: ✅ Complete with GIFs and results
 
 ## Current State
