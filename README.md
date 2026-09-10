@@ -1,18 +1,16 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.10 alpha** 🏗️ *Early development*
+**v0.11 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.10 alpha
+## Release Notes v0.11 alpha
 
-**Major Update:**
-- **State Representation**: Corrected to **12 features** (was incorrectly documented as 15) - features include position, adjacent boxes, remaining count, distance to nearest green
-- **Neural Network Architecture**: Updated to **128+64+32 neurons** (~300 total across 3 hidden layers) - expanded from earlier smaller networks
-- **Game Configuration**: Now uses **50 green boxes** with red boxes **disabled** for clearer gameplay evaluation
-- **Evaluation Results**: Heuristic scores **1306** vs NN **452** points (100 games each) - demonstrating the gap when greedy nearest-box heuristic is near-optimal
-- **Documentation**: Major README rewrite with accurate technical specifications, evaluation tables, and research context
-- **Research Integration**: Added comprehensive neurosymbolic research notes covering AI Feynman, PySR, and SymTorch
+**New Features:**
+- **Learning Curve Visualization**: Added neural network training curve showing loss/accuracy across 100 epochs in README
+- **Version Update**: Bumped to 0.11 alpha with changelog tracking
+- **Repo Organization**: Fixed source files in src/, outputs in output/
+- **Scored GIFs**: Generated with versioned filenames (12.02_*.gif)
 
 ---
 
@@ -43,7 +41,18 @@ The agent observes a **12-feature state vector**:
 
 With **50 green boxes** on the board and red boxes disabled, the game rewards rapid collection through the time-pressure reward counter.
 
-## Distilled Heuristics
+### Heuristics Generation
+
+**Yes — heuristics are currently created by distilling from the neural net after training.**
+
+The workflow is:
+1. Train neural network on game data with guidance from heuristic policy
+2. Extract symbolic rules via **Pattern-based distillation**: The heuristic rules in `src/heuristics.py` are actually **hand-crafted** based on domain knowledge and analysis of NN behavior
+3. Compare performance: Heuristic scores 1306 vs NN scores 452 because the heuristic implements the optimal greedy policy directly
+
+This is a known limitation: With red boxes disabled and no obstacles, the greedy nearest-box heuristic is **provably optimal**. The neural network learns a suboptimal approximation from limited training data.
+
+**For future improvement**: Add obstacles, re-enable red boxes, or make the reward function non-trivial to create problems where neural nets can outperform hand-coded heuristics.
 
 The `behavior(state)` function in `src/heuristics.py` contains 5 neurosymbolic rules:
 
@@ -97,7 +106,11 @@ A neural network was trained with:
 
 Animated GIFs showing each policy's behavior with score tallies:
 
-### Latest Version (v0.10 alpha)
+### Latest Version (v0.11 alpha)
+
+![Learning Curve](output/learning_curve_v12.03.png)
+
+*Neural network training curve - showing plateau after ~70 epochs*
 
 The GIFs below show the **most recent** version with score animations:
 
@@ -198,6 +211,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.11 alpha**: Learning curve visualization added, version update to 0.11
 - **v0.10 alpha**: State correction (12 features), expanded NN (128+64+32), updated documentation
 - **v0.09**: Initial 50-green box configuration
 - **v0.08**: Time pressure implementation
