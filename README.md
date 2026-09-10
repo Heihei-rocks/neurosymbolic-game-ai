@@ -1,16 +1,16 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.11 alpha** 🏗️ *Early development*
+**v0.12 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.11 alpha
+## Release Notes v0.12 alpha
 
-**New Features:**
-- **Learning Curve Visualization**: Added neural network training curve showing loss/accuracy across 100 epochs in README
-- **Version Update**: Bumped to 0.11 alpha with changelog tracking
-- **Repo Organization**: Fixed source files in src/, outputs in output/
-- **Scored GIFs**: Generated with versioned filenames (12.02_*.gif)
+**Improvements:**
+- **Learning Curve Fixed**: Now reports actual game scores per iteration (red dots) instead of meaningless accuracy, runs for 300 iterations
+- **High-Resolution GIFs**: Grid scaled with 300px resolution for readable text annotations, score pop-ups now show actual text "+75" fading yellow→black
+- **Text Rendering**: Using matplotlib with proper fonts (16pt+) instead of pixel blocks for score tally and pop-ups
+- **Version Update**: Incremented to 0.12 alpha
 
 ---
 
@@ -106,9 +106,9 @@ A neural network was trained with:
 
 Animated GIFs showing each policy's behavior with score tallies:
 
-### Latest Version (v0.11 alpha)
+### Latest Version (v0.12 alpha)
 
-![Learning Curve](output/learning_curve_v12.03.png)
+![Game Score Learning Curve](output/learning_curve_v13.04.png)
 
 *Neural network training curve - showing plateau after ~70 epochs*
 
@@ -211,6 +211,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.12 alpha**: Learning curve with game scores, high-res GIFs with proper text rendering
 - **v0.11 alpha**: Learning curve visualization added, version update to 0.11
 - **v0.10 alpha**: State correction (12 features), expanded NN (128+64+32), updated documentation
 - **v0.09**: Initial 50-green box configuration
