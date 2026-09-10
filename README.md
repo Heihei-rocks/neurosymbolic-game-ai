@@ -1,9 +1,22 @@
 # Neurosymbolic Game AI Distillation
 
-**Distilling neural network game policies into symbolic heuristics**
+**v0.10 alpha** 🏗️ *Early development*
+
+This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
+
+## Release Notes v0.10 alpha
+
+**Major Update:**
+- **State Representation**: Corrected to **12 features** (was incorrectly documented as 15) - features include position, adjacent boxes, remaining count, distance to nearest green
+- **Neural Network Architecture**: Updated to **128+64+32 neurons** (~300 total across 3 hidden layers) - expanded from earlier smaller networks
+- **Game Configuration**: Now uses **50 green boxes** with red boxes **disabled** for clearer gameplay evaluation
+- **Evaluation Results**: Heuristic scores **1306** vs NN **452** points (100 games each) - demonstrating the gap when greedy nearest-box heuristic is near-optimal
+- **Documentation**: Major README rewrite with accurate technical specifications, evaluation tables, and research context
+- **Research Integration**: Added comprehensive neurosymbolic research notes covering AI Feynman, PySR, and SymTorch
+
+---
 
 ## Overview
-This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
 ### Game Environment
 - **32×32 grid** with randomly placed obstacles  
@@ -84,7 +97,7 @@ python -c "from game import GridGame; from heuristics import behavior; ..."
 
 A neural network was trained with:
 - **Input**: 12-state features (position, adjacent boxes, remaining boxes, distance)
-- **Architecture**: 3 hidden layers of 96 neurons each (~300 total), ReLU activation
+- **Architecture**: 3 hidden layers of **128, 64, 32 neurons** - **224 total neurons** (approximately 300 parameters total)
 - **Output**: Action probabilities (UP/DOWN/LEFT/RIGHT)
 - **Training**: 500 episodes with greedy-guided data, 300 iterations
 
@@ -156,7 +169,7 @@ https://github.com/Heihei-rocks/neurosymbolic-game-ai
 ## Project Status
 
 - **Game Environment**: ✅ Working (32×32 grid with 50 green boxes, red boxes disabled)
-- **Neural Network**: ✅ Trained (128+64+32 neurons, ~300 total) on 500 episodes
+- **Neural Network**: ✅ Trained (128+64+32 neurons, ~224 total) on 500 episodes
 - **Neurosymbolic Distillation**: ✅ Implemented with PySR  
 - **Symbolic Heuristics**: ✅ 5 rules extracted and tested
 - **Policy Comparisons**: ✅ Random, NN, Heuristic evaluated and animated
@@ -167,3 +180,11 @@ https://github.com/Heihei-rocks/neurosymbolic-game-ai
 - **NN Score**: 452 (vs Heuristic: 1306)
 - **Reason**: With red boxes disabled, greedy nearest-target is optimal
 - **For improvement**: Need obstacles, red boxes, or different reward structure to challenge the NN
+
+## Version History
+
+- **v0.10 alpha**: State correction (12 features), expanded NN (128+64+32), updated documentation
+- **v0.09**: Initial 50-green box configuration
+- **v0.08**: Time pressure implementation
+- **v0.07**: First neural network training
+- **v0.01**: Initial prototype
