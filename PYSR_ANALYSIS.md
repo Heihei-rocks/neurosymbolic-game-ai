@@ -2,11 +2,40 @@
 
 ## Summary
 
-PySR successfully ran symbolic regression on the neural network's Q-values, discovering mathematical formulas at different complexity levels.
+PySR successfully discovered mathematical formulas through multiple approaches:
+1. **Q-value regression (v1):** Failed (0 points)
+2. **Contextual formulas (v2):** Limited improvement
+3. **Advantage-based regression (v3):** **SUCCESS (1306 points)** ✅
 
-## Key Finding: Formulas Are Too Simple
+## The Breakthrough: Advantage-Based Formulas
 
-The extracted formulas depend only on **global state** (`remaining` boxes or `reward_counter`), not **local state** (position, adjacent boxes, target directions).
+### What Changed
+
+**Original approach (FAILED):**
+- Predicted: Q(s,a) - absolute values (0-500)
+- Result: Formulas using only global state (`remaining`, `reward_counter`)
+- Score: 0 points
+
+**Fixed approach (SUCCESS):**
+- Predicted: A(s,a) = Q(s,a) - mean(Q(s,:)) - relative advantages
+- Result: Formulas using directional features (`nearest_dx`, `nearest_dy`)
+- Score: 1306 points
+
+### Discovered Formulas (Advantage-Based)
+
+```python
+A_UP    = (nearest_angle × -32.68) × reward_counter
+A_DOWN  = (reward_counter × (nearest_dy / dist_nearest)) × 23.17
+A_LEFT  = nearest_dx × -105.05
+A_RIGHT = nearest_dx × 118.34
+```
+
+**How they work:**
+- **LEFT/RIGHT:** Linear function of `nearest_dx` (move toward target horizontally)
+- **DOWN:** Considers vertical direction normalized by distance, scaled by time pressure
+- **UP:** Uses angle and time pressure
+
+These formulas capture **reactive navigation** - they respond to where the target is!
 
 ### Why This Fails
 
@@ -60,10 +89,49 @@ PySR could not discover formulas incorporating:
 ## Performance
 
 - **Random:** 201 points
-- **Symbolic (PySR):** 0 points (stuck moving right)
+- **Symbolic (Q-based, v1):** 0 points (stuck moving right)
+- **Symbolic (Advantage-based, v3):** **1306 points** ✅
 - **Greedy:** 1306 points
 - **Decision Tree:** 1346 points (100% NN fidelity)
 - **Neural Network:** 1346 points
+
+## Why Advantage-Based Works
+
+### Problem with Q-Values
+
+When predicting Q(s,a), all Q-values are large positive numbers (~0-500) that scale with:
+- Time pressure (reward_counter)
+- Remaining boxes
+
+PySR found these **global scaling patterns** because they explain the most variance:
+```
+Q_UP = remaining² × 347  (explains variance but loses action preference)
+```
+
+### Solution: Predict Advantages
+
+Advantages are **zero-centered** and show which action is better than average:
+```
+A(s,a) = Q(s,a) - mean(Q(s,:))
+```
+
+For each state:
+- Sum of advantages = 0
+- Positive advantage = better than average
+- Negative advantage = worse than average
+
+This forces PySR to learn **relative preferences**, not absolute scaling.
+
+### Result
+
+PySR discovered formulas using **directional features**:
+```
+A_LEFT = nearest_dx × -105
+```
+- When target is left (dx < 0): A_LEFT > 0, agent moves left
+- When target is right (dx > 0): A_LEFT < 0, agent avoids left
+
+This is exactly what the decision tree learned (47% importance on `nearest_dx`)!
 
 ## Conclusions
 
@@ -77,9 +145,23 @@ PySR could not discover formulas incorporating:
 
 ## Implications for Future Iterations
 
-When the game becomes more complex (obstacles, red boxes, larger grids), we expect:
-- Decision trees to degrade first (too many branches)
-- Symbolic formulas to fail earlier (can't capture complexity)
-- Neural networks to maintain performance (can learn arbitrary functions)
+**Current game (simple):**
+- Symbolic (advantage) matches greedy (1306)
+- Decision tree matches NN (1346)
+- Gap is small because greedy is nearly optimal
 
-This validates the neurosymbolic distillation approach while showing its limits for reactive, spatially-aware tasks.
+**Future game (complex: obstacles, red boxes, larger grid):**
+- Symbolic formulas will degrade first (can't capture complex spatial logic)
+- Decision tree will degrade next (too many branches)
+- Neural network will maintain performance (learns arbitrary functions)
+
+**Expected hierarchy with complexity:**
+```
+Simple game:  Random < Symbolic ≈ Greedy < Tree ≈ NN
+Complex game: Random < Symbolic < Greedy < Tree < NN
+```
+
+This validates neurosymbolic distillation while showing the trade-off:
+- **Simple formulas:** Interpretable but limited expressiveness
+- **Decision trees:** More expressive, still interpretable
+- **Neural networks:** Maximum expressiveness, requires distillation for interpretation

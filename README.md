@@ -97,9 +97,10 @@ The workflow:
    - Finds mathematical expressions: Q(s,a) = f(position, greens, reds, ...)
    - Uses genetic programming to evolve equations
    - Balances accuracy vs complexity (parsimony)
-   - **Result**: Discovered formulas based on `remaining` boxes and `reward_counter`
-   - **Performance: 0 points** - formulas too simple, lack spatial awareness
-   - **Insight**: Simple math can't capture reactive behavior (see [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md))
+   - **Result v1 (Q-values)**: Formulas based on `remaining` boxes - too simple, 0 points
+   - **Result v3 (Advantages)**: Formulas using `nearest_dx`, `nearest_dy` - **1306 points!** ✅
+   - **Insight**: Predicting advantages (relative preferences) works better than absolute Q-values
+   - See [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md) for detailed analysis
 
 3. **Pattern Analysis**:
    - Mines state-action correlations
@@ -110,9 +111,10 @@ The workflow:
 - `src/heuristics_distilled.py` - Extracted decision tree rules (100% fidelity)
 - `src/distilled_tree.joblib` - Decision tree model
 - `src/distillation_results.npz` - Analysis data
-- `src/SYMBOLIC_RULES.md` - PySR mathematical formulas
-- `src/heuristics_symbolic.py` - Symbolic policy implementation
-- [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md) - Detailed analysis of why symbolic formulas fail
+- `src/SYMBOLIC_RULES.md` - PySR Q-value formulas (v1, failed)
+- `src/ADVANTAGE_RULES.md` - PySR advantage formulas (v3, success!)
+- `src/heuristics_advantage_symbolic.py` - Working symbolic policy (1306 points)
+- [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md) - Complete analysis of PySR approaches
 
 The `behavior(state)` function in `src/heuristics.py` contains 5 neurosymbolic rules:
 
@@ -215,19 +217,27 @@ Animated GIFs showing each policy's behavior with score tallies:
 | Policy | Mean Score | Std Dev |
 |--------|------------|---------|
 | Random | 201.00 | 0.00 |
+| Symbolic (Advantage) | 1306.00 | 0.00 |
 | Greedy Heuristic | 1306.00 | 0.00 |
 | RL Agent | 1346.00 | 0.00 |
 | Distilled Tree | 1346.00 | 0.00 |
 
-**Key Finding**: The RL agent surpasses the hand-coded greedy heuristic by 40 points (103% optimal), demonstrating that deep reinforcement learning can discover superior strategies through trial-and-error exploration.
+**Key Findings:**
 
-**Why RL beats greedy:** 
-- Multi-target route planning: RL considers 2nd and 3rd nearest boxes for optimal pathing
-- Reward counter awareness: Agent learns to optimize under time pressure
-- Strategic positioning: 5000 episodes of exploration discovered non-obvious shortcuts
-- The greedy heuristic only looks at the nearest box, missing better long-term paths
+1. **RL agent surpasses greedy heuristic** by 40 points (103% optimal)
+   - Multi-target route planning (2nd & 3rd nearest boxes)
+   - Reward counter awareness (time pressure optimization)
+   - Strategic positioning learned through 5000 episodes
 
-**Perfect distillation**: The decision tree extracts 100% of the NN's performance into interpretable symbolic rules (18 leaf nodes, 7 levels deep).
+2. **Symbolic regression works with advantage-based formulas** (1306 points)
+   - Advantage formulas: `A_LEFT = nearest_dx × -105`, `A_RIGHT = nearest_dx × 118`
+   - Uses directional features for reactive navigation
+   - Matches greedy heuristic performance
+   - See [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md) for why Q-based formulas failed
+
+3. **Perfect distillation via decision trees** (1346 points, 100% NN match)
+   - 18 leaf nodes, 7 levels deep
+   - Extracts 100% of NN performance into interpretable if-then rules
 
 ---
 
