@@ -12,7 +12,8 @@
       "Bash(git commit -m ' *)",
       "Bash(python src/plot_swarm_training.py)",
       "Bash(python src/demo_swarm.py)",
-      "Bash(python src/compare_swarm.py)"
+      "Bash(python src/compare_swarm.py)",
+      "Bash(python test_priority_overlay.py)"
     ]
   }
 }

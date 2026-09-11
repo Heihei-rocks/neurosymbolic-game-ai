@@ -458,13 +458,13 @@ class MultiRobotSearchGame:
         # Convert to RGBA for transparency control
         priority_overlay = priority_overlay.convert('RGBA')
 
-        # Adjust alpha channel: priority map with 30% opacity
+        # Adjust alpha channel: priority map with 50% opacity for better visibility
         priority_data = priority_overlay.getdata()
         priority_with_alpha = []
         for item in priority_data:
-            # White where priority is high, with 30% opacity
+            # White where priority is high, with 50% opacity
             gray_value = item[0]
-            alpha = int(gray_value * 0.3)  # 30% max opacity
+            alpha = int(gray_value * 0.5)  # 50% max opacity (was 30%)
             priority_with_alpha.append((255, 255, 255, alpha))
 
         priority_overlay.putdata(priority_with_alpha)
