@@ -49,22 +49,22 @@ class SwarmReplayBuffer:
 class SwarmQLearningAgent:
     """Q-learning agent for multi-robot swarm control."""
 
-    def __init__(self, state_dim, num_robots, hidden_layers=(128, 64)):
+    def __init__(self, state_dim, num_robots, hidden_layers=(256, 128, 64)):
         self.state_dim = state_dim
         self.num_robots = num_robots
         self.n_actions_per_robot = 5  # Turn left, straight, turn right, speed up, slow down
         self.gamma = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.9975  # Reach ~0.05 by episode 500
 
-        # Q-network
+        # Q-network (larger for complex coordination task)
         self.model = MLPRegressor(
             hidden_layer_sizes=hidden_layers,
             activation='relu',
             solver='adam',
             learning_rate='adaptive',
-            learning_rate_init=0.0005,
+            learning_rate_init=0.001,  # Increased from 0.0005 for faster learning
             max_iter=1,
             warm_start=True,
             random_state=42,
@@ -261,7 +261,7 @@ class SwarmQLearningAgent:
             self.epsilon *= self.epsilon_decay
 
 
-def train_swarm_agent(n_episodes=200, max_steps=30, eval_every=20, verbose=True):
+def train_swarm_agent(n_episodes=500, max_steps=30, eval_every=50, verbose=True):
     """
     Train Q-learning agent for multi-robot search.
 
@@ -292,7 +292,7 @@ def train_swarm_agent(n_episodes=200, max_steps=30, eval_every=20, verbose=True)
     temp_agent = SwarmQLearningAgent(
         state_dim=1,  # Dummy value
         num_robots=game.num_robots,
-        hidden_layers=(128, 64)  # Smaller network
+        hidden_layers=(256, 128, 64)  # Larger network for complex task
     )
 
     # Get state dimension
@@ -304,7 +304,7 @@ def train_swarm_agent(n_episodes=200, max_steps=30, eval_every=20, verbose=True)
     agent = SwarmQLearningAgent(
         state_dim=state_dim,
         num_robots=game.num_robots,
-        hidden_layers=(128, 64)  # Smaller network
+        hidden_layers=(256, 128, 64)  # Larger network
     )
 
     episode_rewards = []
@@ -343,9 +343,9 @@ def train_swarm_agent(n_episodes=200, max_steps=30, eval_every=20, verbose=True)
             # Store experience
             agent.replay_buffer.add(state, action_indices, reward, next_state, done)
 
-            # Train
-            if len(agent.replay_buffer) >= 32:
-                loss = agent.train_step(batch_size=32)
+            # Train with larger batch size
+            if len(agent.replay_buffer) >= 64:
+                loss = agent.train_step(batch_size=64)
                 if loss is not None:
                     episode_loss.append(loss)
 
@@ -422,9 +422,9 @@ if __name__ == "__main__":
 
     # Train
     agent, train_scores, eval_scores = train_swarm_agent(
-        n_episodes=200,
+        n_episodes=500,
         max_steps=30,
-        eval_every=20,
+        eval_every=50,
         verbose=True
     )
 

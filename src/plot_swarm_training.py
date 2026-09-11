@@ -24,7 +24,9 @@ def plot_training_progress():
 
     # Episodes
     train_episodes = np.arange(1, len(train_scores) + 1)
-    eval_episodes = np.arange(20, len(train_scores) + 1, 20)  # Every 20 episodes
+    # Eval episodes: need to match the actual eval_scores length
+    eval_interval = len(train_scores) // len(eval_scores) if len(eval_scores) > 0 else 50
+    eval_episodes = np.arange(eval_interval, len(train_scores) + 1, eval_interval)[:len(eval_scores)]
 
     # Create figure
     fig, ax = plt.subplots(1, 1, figsize=(12, 6))

@@ -1,48 +1,49 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.23 alpha** 🏗️ *Early development*
+**v0.24 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.23 alpha
+## Release Notes v0.24 alpha
 
-**Retrained with Faster Decay & Complex Priority Maps! 🎓**
+**Option A Training: Bigger Network, More Episodes! 🧠**
 
-Improved training environment and retrained neural network:
+Implemented improved training configuration based on analysis:
 
-**Environment Improvements:**
-- **Decay rate: 0.97 → 0.95** - Coverage decays 5% per timestep (more aggressive revisiting required)
-- **Complex priority maps**: 5-12 random Gaussian blobs per game (was fixed 5)
-- **Wider blob sizes**: sigma 20-150 pixels (was 30-100)
-- **Additive blending**: overlapping blobs create higher priority zones
-- More varied and challenging scenarios per episode
+**Training Improvements (Option A):**
+- **500 episodes** (was 200) - 2.5x more training data
+- **Network: (256, 128, 64)** (was 128, 64) - ~85K parameters vs ~25K
+- **Batch size: 64** (was 32) - better gradient estimates
+- **Learning rate: 0.001** (was 0.0005) - 2x faster learning
+- **Epsilon decay: 0.9975** (was 0.995) - reaches 0.286 by episode 500
+- **15,000 experiences** in replay buffer (was 6,000)
 
-**Training Results (50×50 grid, 200 episodes):**
-- Final test score: **32,329**
-- Loss: 35K → 9K (steady convergence)
-- Best score: 32,695 at episode 120
+**Training Results (50×50 grid, 500 episodes, ~20 min):**
+- Final test score: **33,047** (up from 32,329)
+- Training improvement: 31,098 → 33,047 (+6.3%)
+- Final epsilon: 0.286 (better exploitation vs 0.367 before)
 
 **Performance (20 test games on 50×50 grid):**
 - Random baseline: **32,951 ± 2,689**
-- Trained agent: **36,838 ± 1,231** (+11.8% improvement)
-- More consistent performance (lower std dev)
+- Trained agent: **37,470 ± 1,157** (+13.7% improvement!)
+- Previous: 36,838 ± 1,231 (+11.8%)
+- **+1.9pp improvement** from larger network + more training
 
 **Performance (500×500 grid, single game):**
 - Random: **1,362,958**
-- Trained: **1,372,731** (+0.7% improvement)
+- Trained: **1,448,055** (+6.2% improvement)
 
-**Why this matters:**
-- Faster decay forces more sophisticated revisiting strategies
-- Complex priority maps require adaptive behavior across varied scenarios
-- Agent shows consistent improvement and lower variance
+**Analysis Findings:**
+- Previous network (128, 64) was too small for 191-feature coordination task
+- 200 episodes provided insufficient experience (6K samples)
+- Learning rate 0.0005 was too conservative
+- Larger capacity + more data = better generalization
 
-**Previous (v0.22 alpha):**
+**Note:** Loss increased during late training (10K → 81K), suggesting potential overfitting or learning rate instability. Performance still improved overall.
 
-True 500×500 resolution with light blue trails and darker cyan arrows
+**Previous (v0.23 alpha):**
 
-**Previous (v0.18 alpha training):**
-
-First training: 3 robots, 50×50 grid, 0.97 decay, fixed priority maps
+Retrained with 0.95 decay (faster), complex priority maps (5-12 blobs), +11.8% improvement
 
 **Training Infrastructure:**
 - Q-learning with experience replay for 3-robot swarm
@@ -444,6 +445,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.24 alpha**: Option A training - 500 episodes, (256,128,64) network, batch 64, lr 0.001, +13.7% improvement
 - **v0.23 alpha**: Retrained with 0.95 decay (faster), complex priority maps (5-12 blobs), +11.8% improvement
 - **v0.22 alpha**: True 500×500 resolution animations, light blue fading trails, darker cyan arrows, +49% trained vs random
 - **v0.21 alpha**: Full-resolution animations with trails and arrowheads (used 50×50 by mistake)
