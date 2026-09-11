@@ -1,12 +1,34 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.14 alpha** 🏗️ *Early development*
+**v0.15 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.14 alpha
+## Release Notes v0.15 alpha
 
-**BREAKTHROUGH: Neural Network Surpasses Hand-Coded Heuristic! 🏆**
+**BREAKTHROUGH: PySR Symbolic Regression Now Works! 🎉**
+
+**Fixed PySR approach - now produces working formulas:**
+- **Problem (v0.14):** Q-value regression found global patterns, scored 0 points
+- **Solution (v0.15):** Advantage-based regression finds directional logic, scores 1306!
+- **Key insight:** Predict A(s,a) = Q(s,a) - mean(Q) instead of raw Q-values
+
+**Discovered symbolic formulas:**
+```python
+A_LEFT  = nearest_dx × -105.05
+A_RIGHT = nearest_dx × 118.34
+A_DOWN  = (reward_counter × (nearest_dy / dist)) × 23.17
+A_UP    = (nearest_angle × -32.68) × reward_counter
+```
+
+**Performance hierarchy achieved:**
+- Random: 201 points
+- **Symbolic (Advantage)**: 1306 points ✅ (working neurosymbolic distillation!)
+- Greedy Heuristic: 1306 points
+- Decision Tree: 1346 points (100% NN fidelity)
+- RL Agent: 1346 points (103% of greedy)
+
+**Previous (v0.14 alpha):**
 
 **Final Results (100 games each):**
 - Random: 201 points (15% optimal)
