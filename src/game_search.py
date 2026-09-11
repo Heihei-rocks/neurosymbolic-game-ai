@@ -245,7 +245,8 @@ class MultiRobotSearchGame:
                     self.coverage[ty, tx] = 1.0
                     continue
 
-                angle_to_target = np.arctan2(dy, dx)
+                # FIXED: angle_to_target in image coordinates (y-axis points down)
+                angle_to_target = np.arctan2(-dy, dx)  # Negative dy because y increases downward in image
 
                 # Angle difference from heading
                 angle_diff = angle_to_target - heading
@@ -378,9 +379,10 @@ class MultiRobotSearchGame:
             )
 
             # Heading indicator (white line)
+            # FIXED: heading in image coordinates (y increases downward)
             line_length = 10
             end_x = x_px + line_length * np.cos(heading)
-            end_y = y_px + line_length * np.sin(heading)
+            end_y = y_px - line_length * np.sin(heading)  # Negative because y points down
             draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=2)
 
         if save_path:
@@ -411,7 +413,7 @@ class MultiRobotSearchGame:
 
     def render_weighted_coverage(self, save_path=None):
         """
-        Render the weighted coverage (SA * priority).
+        Render the weighted coverage (SA * priority) with priority map overlay.
 
         Args:
             save_path: If provided, save image to this path
@@ -426,11 +428,35 @@ class MultiRobotSearchGame:
         weighted_colored = self.cmap(weighted)[:, :, :3]  # RGB only
         img_array = (weighted_colored * 255).astype(np.uint8)
 
-        # Convert to PIL for drawing robots
+        # Convert to PIL
         img = Image.fromarray(img_array)
+
+        # Create priority map overlay (grayscale, mostly transparent)
+        priority_gray = (self.priority_map * 255).astype(np.uint8)
+        priority_overlay = Image.fromarray(priority_gray, mode='L')
+
+        # Convert to RGBA for transparency control
+        priority_overlay = priority_overlay.convert('RGBA')
+
+        # Adjust alpha channel: priority map with 30% opacity
+        priority_data = priority_overlay.getdata()
+        priority_with_alpha = []
+        for item in priority_data:
+            # White where priority is high, with 30% opacity
+            gray_value = item[0]
+            alpha = int(gray_value * 0.3)  # 30% max opacity
+            priority_with_alpha.append((255, 255, 255, alpha))
+
+        priority_overlay.putdata(priority_with_alpha)
+
+        # Composite: weighted coverage + priority overlay
+        img = img.convert('RGBA')
+        img = Image.alpha_composite(img, priority_overlay)
+        img = img.convert('RGB')
+
+        # Draw robots
         draw = ImageDraw.Draw(img)
 
-        # Draw each robot
         for robot_idx in range(self.num_robots):
             x_nmi, y_nmi, heading = self.robots[robot_idx]
             x_px = int(x_nmi / self.nmi_per_pixel)
@@ -447,9 +473,10 @@ class MultiRobotSearchGame:
             )
 
             # Heading indicator (white line)
+            # FIXED: heading in image coordinates (y increases downward)
             line_length = 10
             end_x = x_px + line_length * np.cos(heading)
-            end_y = y_px + line_length * np.sin(heading)
+            end_y = y_px - line_length * np.sin(heading)  # Negative because y points down
             draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=2)
 
         if save_path:
