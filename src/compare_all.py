@@ -7,8 +7,15 @@ Complete comparison: Random vs Heuristic vs RL Agent vs Distilled
 import numpy as np
 import random
 import sys
-sys.path.insert(0, '/Users/djohnson334/Documents/GIT/Heihei/neurosymbolic-game-ai')
-from game import GridGame
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from src.game import GridGame
+except ImportError:
+    from game import GridGame
 
 def greedy_heuristic(state, game):
     """Hand-coded greedy nearest-green heuristic."""

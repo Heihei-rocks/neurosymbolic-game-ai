@@ -13,8 +13,15 @@ from collections import deque
 import joblib
 from sklearn.neural_network import MLPRegressor
 import sys
-sys.path.insert(0, '/Users/djohnson334/Documents/GIT/Heihei/neurosymbolic-game-ai')
-from game import GridGame
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from src.game import GridGame
+except ImportError:
+    from game import GridGame
 
 class ReplayBuffer:
     """Store and sample experience tuples."""
@@ -43,7 +50,7 @@ class QLearningAgent:
         self.gamma = 0.95  # Discount factor
         self.epsilon = 1.0  # Exploration rate
         self.epsilon_min = 0.05
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.9993  # Decays to ~0.05 after ~5000 episodes
 
         # Q-network (predicts Q-value for each action given state)
         self.model = MLPRegressor(
@@ -54,7 +61,8 @@ class QLearningAgent:
             learning_rate_init=0.001,
             max_iter=1,  # We'll call partial_fit repeatedly
             warm_start=True,
-            random_state=42
+            random_state=42,
+            verbose=False  # Suppress sklearn warnings
         )
 
         # Initialize with dummy data
@@ -99,13 +107,14 @@ class QLearningAgent:
         # Train the network
         self.model.partial_fit(states, target_q)
 
-        # Decay epsilon
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-
         # Calculate loss for monitoring
         loss = np.mean((current_q - target_q) ** 2)
         return loss
+
+    def decay_epsilon(self):
+        """Decay epsilon - call once per episode."""
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
 
 
 def train_agent(n_episodes=5000, max_steps=100, eval_every=100, verbose=True):
@@ -118,6 +127,9 @@ def train_agent(n_episodes=5000, max_steps=100, eval_every=100, verbose=True):
         eval_every: Evaluate performance every N episodes
         verbose: Print progress
     """
+    import warnings
+    warnings.filterwarnings('ignore', category=Warning)
+
     agent = QLearningAgent(state_dim=12, n_actions=4, hidden_layers=(256, 128, 64))
 
     episode_rewards = []
@@ -131,7 +143,9 @@ def train_agent(n_episodes=5000, max_steps=100, eval_every=100, verbose=True):
         print(f"Episodes: {n_episodes}")
         print(f"Architecture: {agent.model.hidden_layer_sizes}")
         print(f"Replay buffer: {agent.replay_buffer.buffer.maxlen}")
+        print(f"Progress updates every {eval_every} episodes")
         print("=" * 60)
+        print()
 
     for episode in range(n_episodes):
         game = GridGame(seed=episode, green_count=50, red_disabled=True)
@@ -165,6 +179,13 @@ def train_agent(n_episodes=5000, max_steps=100, eval_every=100, verbose=True):
         episode_rewards.append(episode_reward)
         episode_scores.append(game.score)
 
+        # Decay epsilon once per episode
+        agent.decay_epsilon()
+
+        # Show progress indicator
+        if verbose and (episode + 1) % 10 == 0 and (episode + 1) % eval_every != 0:
+            print(f"  Episode {episode+1:5d} / {n_episodes} ({100*(episode+1)/n_episodes:.1f}%)", end='\r', flush=True)
+
         # Evaluation
         if (episode + 1) % eval_every == 0:
             # Test on fixed seeds without exploration
@@ -186,12 +207,14 @@ def train_agent(n_episodes=5000, max_steps=100, eval_every=100, verbose=True):
 
             if verbose:
                 mean_loss = np.mean(episode_loss) if episode_loss else 0
-                print(f"Episode {episode+1:5d} | "
-                      f"Score: {game.score:6.1f} | "
+                progress_pct = 100 * (episode + 1) / n_episodes
+                print(f"\r{'':80}", end='\r')  # Clear progress line
+                print(f"Episode {episode+1:5d}/{n_episodes} ({progress_pct:5.1f}%) | "
+                      f"Train: {game.score:6.1f} | "
                       f"Test: {mean_test_score:6.1f} | "
-                      f"Epsilon: {agent.epsilon:.3f} | "
+                      f"ε: {agent.epsilon:.3f} | "
                       f"Loss: {mean_loss:.4f} | "
-                      f"Buffer: {len(agent.replay_buffer)}")
+                      f"Buf: {len(agent.replay_buffer)}", flush=True)
 
     if verbose:
         print("=" * 60)

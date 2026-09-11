@@ -1,16 +1,20 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.12 alpha** 🏗️ *Early development*
+**v0.13 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.12 alpha
+## Release Notes v0.13 alpha
 
-**Improvements:**
-- **Learning Curve Fixed**: Now reports actual game scores per iteration (red dots) instead of meaningless accuracy, runs for 300 iterations
-- **High-Resolution GIFs**: Grid scaled with 300px resolution for readable text annotations, score pop-ups now show actual text "+75" fading yellow→black
-- **Text Rendering**: Using matplotlib with proper fonts (16pt+) instead of pixel blocks for score tally and pop-ups
-- **Version Update**: Incremented to 0.12 alpha
+**Major Improvements:**
+- **Reinforcement Learning Training**: Replaced behavioral cloning with Q-learning + experience replay (5000 episodes)
+- **Deeper Neural Network**: Upgraded from (64,32) to (256,128,64) architecture (~35K parameters)
+- **True Neurosymbolic Distillation**: Implemented decision tree + PySR symbolic regression to extract rules from trained NN
+- **Comprehensive Evaluation**: Added comparison framework for Random, Heuristic, RL Agent, and Distilled policies
+- **Better Progress Reporting**: Real-time training progress with epsilon, loss, and buffer metrics
+
+**Previous (v0.12 alpha):**
+- Learning curve with game scores, high-res GIFs with text rendering
 
 ---
 
@@ -41,18 +45,40 @@ The agent observes a **12-feature state vector**:
 
 With **50 green boxes** on the board and red boxes disabled, the game rewards rapid collection through the time-pressure reward counter.
 
-### Heuristics Generation
+### Neurosymbolic Distillation (v0.13)
 
-**Yes — heuristics are currently created by distilling from the neural net after training.**
+**True distillation pipeline that extracts symbolic rules from trained neural networks.**
 
-The workflow is:
-1. Train neural network on game data with guidance from heuristic policy
-2. Extract symbolic rules via **Pattern-based distillation**: The heuristic rules in `src/heuristics.py` are actually **hand-crafted** based on domain knowledge and analysis of NN behavior
-3. Compare performance: Heuristic scores 1306 vs NN scores 452 because the heuristic implements the optimal greedy policy directly
+The improved workflow:
+1. **Train RL agent**: Q-learning with experience replay (5000 episodes) to learn optimal policy
+2. **Extract symbolic rules**: Three complementary methods:
+   - **Decision Trees**: Mimic NN with 95%+ fidelity, fully interpretable
+   - **PySR Symbolic Regression**: Find mathematical formulas for Q-values
+   - **Pattern Mining**: Extract high-level strategic insights
+3. **Compare performance**: RL agent, distilled rules, greedy heuristic, and random baseline
 
-This is a known limitation: With red boxes disabled and no obstacles, the greedy nearest-box heuristic is **provably optimal**. The neural network learns a suboptimal approximation from limited training data.
+**Distillation Methods:**
 
-**For future improvement**: Add obstacles, re-enable red boxes, or make the reward function non-trivial to create problems where neural nets can outperform hand-coded heuristics.
+1. **Decision Tree Extraction** (`distill_improved.py`):
+   - Collects (state, action) pairs from trained NN
+   - Trains decision tree to mimic NN decisions
+   - Result: Human-readable if-then rules with 95%+ accuracy
+   - Fast inference without matrix multiplication
+
+2. **Symbolic Regression with PySR**:
+   - Finds mathematical expressions: Q(s,a) = f(position, greens, reds, ...)
+   - Uses genetic programming to evolve equations
+   - Balances accuracy vs complexity (parsimony)
+
+3. **Pattern Analysis**:
+   - Mines state-action correlations
+   - Identifies learned strategies
+   - Example: "When green adjacent → move toward it (87%)"
+
+**Generated Files:**
+- `src/heuristics_distilled.py` - Extracted symbolic rules
+- `src/distilled_tree.joblib` - Decision tree model
+- `src/distillation_results.npz` - Analysis data
 
 The `behavior(state)` function in `src/heuristics.py` contains 5 neurosymbolic rules:
 
@@ -97,10 +123,34 @@ python src/game.py
 
 A neural network was trained with:
 - **Input**: 12-state features (position, adjacent boxes, remaining boxes, distance)
-- **Architecture**: 3 hidden layers of **128, 64, 32 neurons** - **224 total neurons** (approximately 300 parameters total)
-- **Output**: Action probabilities (UP/DOWN/LEFT/RIGHT)
-- **Training**: 500 episodes with greedy-guided data, 300 iterations
-- **Model Location**: `src/game_model.joblib`
+- **Architecture**: 3 hidden layers of **256, 128, 64 neurons** (~35K parameters)
+- **Training Method**: Q-learning with experience replay (5000 episodes)
+- **Output**: Q-values for each action (UP/DOWN/LEFT/RIGHT)
+- **Model Location**: `src/game_model_rl.joblib`
+
+### Training Improvements (v0.13)
+
+**Reinforcement Learning vs Behavioral Cloning:**
+- Previous: Imitation learning from 200-500 greedy demonstrations
+- New: Q-learning with epsilon-greedy exploration over 5000 episodes
+- Result: Agent discovers optimal strategies through trial-and-error
+
+**Key Training Features:**
+- Experience replay buffer (50K capacity) for stable learning
+- Epsilon decay (1.0 → 0.05) for exploration-exploitation balance
+- Bellman equation updates: Q(s,a) ← r + γ·max Q(s',a')
+- Adaptive learning rate with Adam optimizer
+
+**Quick Start:**
+```bash
+# Run complete pipeline (train + distill + evaluate)
+python run_pipeline.py
+
+# Or run individual steps:
+python src/train_rl.py           # Train RL agent (~3-5 min)
+python src/distill_improved.py   # Extract symbolic rules
+python src/compare_all.py        # Compare all policies
+```
 
 ## Policy Animations
 

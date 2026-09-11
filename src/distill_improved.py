@@ -13,8 +13,15 @@ import numpy as np
 import joblib
 from sklearn.tree import DecisionTreeClassifier, export_text
 import sys
-sys.path.insert(0, '/Users/djohnson334/Documents/GIT/Heihei/neurosymbolic-game-ai')
-from game import GridGame
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from src.game import GridGame
+except ImportError:
+    from game import GridGame
 
 try:
     from pysr import PySRRegressor
