@@ -34,9 +34,10 @@ class MultiRobotSearchGame:
                  num_robots=None,
                  sensor_range=20.0,  # nmi (increased from 5.0)
                  sensor_fov_degrees=90,
-                 decay_rate=0.99,
-                 ingress_formation='lattice',  # Loose lattice at bottom
+                 decay_rate=0.97,  # Changed from 0.99 to 0.97 (faster decay)
+                 ingress_formation='clump',  # Changed from 'lattice' to 'clump'
                  colormap='inferno',  # inferno, bone, jet, plasma, viridis
+                 num_priority_blobs=5,  # Number of Gaussian blobs for priority map
                  seed=42):
         """
         Initialize multi-robot search game.
@@ -47,9 +48,10 @@ class MultiRobotSearchGame:
             num_robots: Number of robots (random 1-10 if None)
             sensor_range: Sensor range in nmi
             sensor_fov_degrees: Field of view in degrees
-            decay_rate: Coverage decay per timestep (0.99 = 1% decay)
-            ingress_formation: 'lattice' for coordinated start at bottom
+            decay_rate: Coverage decay per timestep (0.97 = 3% decay)
+            ingress_formation: 'clump' for tight start, 'lattice' for spread
             colormap: Matplotlib colormap name
+            num_priority_blobs: Number of Gaussian blobs for priority map
             seed: Random seed
         """
         random.seed(seed)
@@ -68,6 +70,9 @@ class MultiRobotSearchGame:
         self.decay_rate = decay_rate
         self.ingress_formation = ingress_formation
 
+        # Priority map parameters
+        self.num_priority_blobs = num_priority_blobs
+
         # Visualization
         self.colormap = colormap
         try:
@@ -75,6 +80,9 @@ class MultiRobotSearchGame:
         except AttributeError:
             # Newer matplotlib versions
             self.cmap = plt.get_cmap(colormap)
+
+        # Initialize priority map (static for game lifetime)
+        self.priority_map = self._generate_priority_map()
 
         # Initialize robots in formation
         self.robots = self._init_robots_formation()
@@ -92,11 +100,63 @@ class MultiRobotSearchGame:
         self.score_history = []
         self.coverage_sum_history = []
 
+    def _generate_priority_map(self):
+        """
+        Generate priority map as mixture of random Gaussian blobs.
+
+        Returns:
+            Priority map (grid_size x grid_size) with values [0, 1]
+        """
+        priority_map = np.zeros((self.grid_size, self.grid_size), dtype=np.float32)
+
+        # Generate random Gaussian blobs
+        for _ in range(self.num_priority_blobs):
+            # Random center position (in pixels)
+            center_x = random.randint(0, self.grid_size - 1)
+            center_y = random.randint(0, self.grid_size - 1)
+
+            # Random sigma (spread) - range from narrow to wide blobs
+            sigma = random.uniform(30, 100)  # pixels
+
+            # Random intensity
+            intensity = random.uniform(0.3, 1.0)
+
+            # Generate Gaussian blob
+            y_coords, x_coords = np.ogrid[:self.grid_size, :self.grid_size]
+            dist_squared = (x_coords - center_x)**2 + (y_coords - center_y)**2
+            blob = intensity * np.exp(-dist_squared / (2 * sigma**2))
+
+            # Add to priority map
+            priority_map = np.maximum(priority_map, blob)
+
+        # Normalize to [0, 1]
+        if priority_map.max() > 0:
+            priority_map = priority_map / priority_map.max()
+
+        return priority_map
+
     def _init_robots_formation(self):
-        """Initialize robots in loose lattice formation at bottom, heading north."""
+        """Initialize robots in formation at bottom."""
         robots = []
 
-        if self.ingress_formation == 'lattice':
+        if self.ingress_formation == 'clump':
+            # Tight clump at center bottom
+            center_x = self.world_size_nmi / 2
+
+            for i in range(self.num_robots):
+                # X position: clustered near center with small random variation
+                x = center_x + random.uniform(-3, 3)
+                x = np.clip(x, 0, self.world_size_nmi)
+
+                # Y position: near bottom with small random variation
+                y = random.uniform(0, 3)
+
+                # Heading: generally north (90°) with small random variation
+                heading = np.radians(90) + random.uniform(-0.2, 0.2)
+
+                robots.append([x, y, heading])
+
+        elif self.ingress_formation == 'lattice':
             # Loose lattice spacing at bottom (y ~ 0-5 nmi)
             spacing_x = self.world_size_nmi / (self.num_robots + 1)
 
@@ -130,8 +190,9 @@ class MultiRobotSearchGame:
         # Apply initial sensor coverage
         self._update_coverage()
 
-        # Record initial score
-        coverage_sum = np.sum(self.coverage)
+        # Record initial score (weighted by priority map)
+        weighted_coverage = self.coverage * self.priority_map
+        coverage_sum = np.sum(weighted_coverage)
         self.score += coverage_sum
         self.score_history.append(self.score)
         self.coverage_sum_history.append(coverage_sum)
@@ -232,8 +293,9 @@ class MultiRobotSearchGame:
         # Update coverage
         self._update_coverage()
 
-        # Calculate reward: sum of current coverage matrix (SA value)
-        coverage_sum = np.sum(self.coverage)
+        # Calculate reward: sum of (coverage * priority_map) - weighted SA value
+        weighted_coverage = self.coverage * self.priority_map
+        coverage_sum = np.sum(weighted_coverage)
         reward = coverage_sum
 
         # Update cumulative score
@@ -326,6 +388,75 @@ class MultiRobotSearchGame:
 
         return img
 
+    def render_priority_map(self, save_path=None):
+        """
+        Render the priority map.
+
+        Args:
+            save_path: If provided, save image to this path
+
+        Returns:
+            PIL Image
+        """
+        # Apply colormap to priority map
+        priority_colored = self.cmap(self.priority_map)[:, :, :3]  # RGB only
+        img_array = (priority_colored * 255).astype(np.uint8)
+
+        img = Image.fromarray(img_array)
+
+        if save_path:
+            img.save(save_path)
+
+        return img
+
+    def render_weighted_coverage(self, save_path=None):
+        """
+        Render the weighted coverage (SA * priority).
+
+        Args:
+            save_path: If provided, save image to this path
+
+        Returns:
+            PIL Image
+        """
+        # Weighted coverage
+        weighted = self.coverage * self.priority_map
+
+        # Apply colormap
+        weighted_colored = self.cmap(weighted)[:, :, :3]  # RGB only
+        img_array = (weighted_colored * 255).astype(np.uint8)
+
+        # Convert to PIL for drawing robots
+        img = Image.fromarray(img_array)
+        draw = ImageDraw.Draw(img)
+
+        # Draw each robot
+        for robot_idx in range(self.num_robots):
+            x_nmi, y_nmi, heading = self.robots[robot_idx]
+            x_px = int(x_nmi / self.nmi_per_pixel)
+            y_px = int(y_nmi / self.nmi_per_pixel)
+
+            # Robot body (cyan circle for visibility)
+            robot_radius = 5
+            draw.ellipse(
+                [x_px - robot_radius, y_px - robot_radius,
+                 x_px + robot_radius, y_px + robot_radius],
+                fill=(0, 255, 255),
+                outline=(255, 255, 255),
+                width=2
+            )
+
+            # Heading indicator (white line)
+            line_length = 10
+            end_x = x_px + line_length * np.cos(heading)
+            end_y = y_px + line_length * np.sin(heading)
+            draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=2)
+
+        if save_path:
+            img.save(save_path)
+
+        return img
+
 
 def simple_behavior(game_state, robot_idx):
     """
@@ -366,7 +497,7 @@ def simple_behavior(game_state, robot_idx):
 def demo_game():
     """Demonstrate the multi-robot search game with behavior control."""
     print("="*70)
-    print("MULTI-ROBOT AREA COVERAGE GAME DEMO")
+    print("MULTI-ROBOT AREA COVERAGE GAME DEMO - v2")
     print("="*70)
 
     # Create game
@@ -376,9 +507,10 @@ def demo_game():
         num_robots=6,
         sensor_range=20.0,
         sensor_fov_degrees=90,
-        decay_rate=0.99,
-        ingress_formation='lattice',
+        decay_rate=0.97,  # Faster decay
+        ingress_formation='clump',  # Tight clump
         colormap='inferno',
+        num_priority_blobs=5,
         seed=42
     )
 
@@ -391,12 +523,24 @@ def demo_game():
     print(f"  Coverage decay rate: {game.decay_rate}")
     print(f"  Formation: {game.ingress_formation}")
     print(f"  Colormap: {game.colormap}")
+    print(f"  Priority blobs: {game.num_priority_blobs}")
+
+    # Render priority map
+    print(f"\n{'='*70}")
+    print("PRIORITY MAP (Gaussian Mixture)")
+    print('='*70)
+    game.render_priority_map(save_path='output/search_v3_priority_map.png')
+    print(f"✓ Priority map saved to output/search_v3_priority_map.png")
+    print(f"  Priority statistics:")
+    print(f"    Mean: {np.mean(game.priority_map):.3f}")
+    print(f"    Max: {np.max(game.priority_map):.3f}")
+    print(f"    Min: {np.min(game.priority_map):.3f}")
 
     # Initialize
     state = game.reset()
 
     print(f"\n{'='*70}")
-    print("INITIAL STATE (Lattice Formation at Bottom)")
+    print("INITIAL STATE (Clump Formation at Bottom Center)")
     print('='*70)
 
     print("\nRobot positions:")
@@ -404,9 +548,12 @@ def demo_game():
         print(f"  Robot {i}: pos=({robot[0]:.1f}, {robot[1]:.1f}) nmi, "
               f"heading={np.degrees(robot[2]):.1f}°")
 
-    # Render initial state
-    img = game.render(save_path='output/search_v2_initial.png')
-    print(f"\n✓ Initial state saved to output/search_v2_initial.png")
+    # Render initial state (both raw and weighted)
+    img = game.render(save_path='output/search_v3_initial_coverage.png')
+    print(f"\n✓ Initial coverage saved to output/search_v3_initial_coverage.png")
+
+    img_weighted = game.render_weighted_coverage(save_path='output/search_v3_initial_weighted.png')
+    print(f"✓ Initial weighted coverage saved to output/search_v3_initial_weighted.png")
 
     # Run simulation with coordinated behavior
     print(f"\n{'='*70}")
@@ -423,18 +570,22 @@ def demo_game():
         state, reward, done, _ = game.step(actions)
 
         if t % 10 == 0:
-            coverage_sum = game.coverage_sum_history[-1]
-            print(f"  t={t:2d}: coverage_sum={coverage_sum:7.1f}, "
+            weighted_sum = game.coverage_sum_history[-1]
+            print(f"  t={t:2d}: weighted_coverage={weighted_sum:7.1f}, "
                   f"cumulative_score={game.score:.1f}, "
                   f"mean_cov={np.mean(game.coverage):.3f}")
 
         # Save intermediate frames
         if t in [10, 25, 49]:
-            img = game.render(save_path=f'output/search_v2_t{t:02d}.png')
+            game.render(save_path=f'output/search_v3_t{t:02d}_coverage.png')
+            game.render_weighted_coverage(save_path=f'output/search_v3_t{t:02d}_weighted.png')
 
-    # Final render
-    img = game.render(save_path='output/search_v2_final.png')
-    print(f"\n✓ Final state saved to output/search_v2_final.png")
+    # Final renders
+    game.render(save_path='output/search_v3_final_coverage.png')
+    print(f"\n✓ Final coverage saved to output/search_v3_final_coverage.png")
+
+    game.render_weighted_coverage(save_path='output/search_v3_final_weighted.png')
+    print(f"✓ Final weighted coverage saved to output/search_v3_final_weighted.png")
 
     # Plot results
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
@@ -442,49 +593,39 @@ def demo_game():
     # Plot 1: Cumulative score over time
     ax1.plot(game.score_history, linewidth=2)
     ax1.set_xlabel('Timestep', fontsize=12)
-    ax1.set_ylabel('Cumulative Score', fontsize=12)
-    ax1.set_title('Total Score Over Time', fontsize=14, fontweight='bold')
+    ax1.set_ylabel('Cumulative Score (Weighted)', fontsize=12)
+    ax1.set_title('Total Weighted Score Over Time', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
 
-    # Plot 2: Coverage sum per timestep
+    # Plot 2: Weighted coverage sum per timestep
     ax2.plot(game.coverage_sum_history, linewidth=2, color='orange')
     ax2.set_xlabel('Timestep', fontsize=12)
-    ax2.set_ylabel('Coverage Sum (SA Value)', fontsize=12)
-    ax2.set_title('Instantaneous Coverage Per Timestep', fontsize=14, fontweight='bold')
+    ax2.set_ylabel('Weighted Coverage Sum', fontsize=12)
+    ax2.set_title('Instantaneous Weighted Coverage Per Timestep', fontsize=14, fontweight='bold')
     ax2.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('output/search_v2_scores.png', dpi=150)
-    print(f"✓ Score plots saved to output/search_v2_scores.png")
+    plt.savefig('output/search_v3_scores.png', dpi=150)
+    print(f"✓ Score plots saved to output/search_v3_scores.png")
 
     print(f"\n{'='*70}")
     print("DEMO COMPLETE")
     print('='*70)
     print(f"\nFinal statistics:")
-    print(f"  Cumulative score: {game.score:.1f}")
-    print(f"  Mean coverage: {np.mean(game.coverage):.3f}")
+    print(f"  Cumulative score (weighted): {game.score:.1f}")
+    print(f"  Mean raw coverage: {np.mean(game.coverage):.3f}")
+    print(f"  Mean weighted coverage: {np.mean(game.coverage * game.priority_map):.3f}")
     print(f"  Max coverage: {np.max(game.coverage):.3f}")
-    print(f"  Min coverage: {np.min(game.coverage):.3f}")
     print(f"  Timesteps: {game.timestep}")
 
     print(f"\n{'='*70}")
-    print("COLORMAP DEMONSTRATIONS")
+    print("KEY INSIGHT")
     print('='*70)
-
-    # Test different colormaps
-    colormaps = ['inferno', 'plasma', 'viridis', 'bone', 'jet']
-    print(f"\nGenerating comparison images for colormaps: {', '.join(colormaps)}")
-
-    for cmap_name in colormaps:
-        game.colormap = cmap_name
-        try:
-            game.cmap = cm.get_cmap(cmap_name)
-        except AttributeError:
-            game.cmap = plt.get_cmap(cmap_name)
-        game.render(save_path=f'output/search_v2_colormap_{cmap_name}.png')
-        print(f"  ✓ {cmap_name}")
-
-    print(f"\n✓ All colormap demos saved to output/search_v2_colormap_*.png")
+    print("Robots must learn to:")
+    print("  1. Identify high-priority regions (hotspots in priority map)")
+    print("  2. Balance coverage vs revisiting (0.97 decay is aggressive)")
+    print("  3. Coordinate to avoid redundant coverage")
+    print("  4. Maximize weighted coverage sum = SA * Priority")
 
 
 if __name__ == "__main__":

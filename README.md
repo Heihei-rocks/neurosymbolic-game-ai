@@ -1,12 +1,35 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.16 alpha** 🏗️ *Early development*
+**v0.17 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.16 alpha
+## Release Notes v0.17 alpha
 
-**NEW GAME: Multi-Robot Area Coverage! 🚁**
+**Multi-Robot Search Game Enhanced! 🎯**
+
+Major improvements to the coordinated search game:
+
+**Priority Map System:**
+- Gaussian mixture model creates 5 random hotspots (high-value regions)
+- Score = Σ(Coverage × Priority) - robots must seek high-priority areas
+- Creates realistic intelligence, surveillance, reconnaissance (ISR) scenario
+
+**Formation Changes:**
+- Robots start in tight clump (not lattice) at bottom center
+- Decay rate increased to 0.97 (3% per timestep) - forces active revisiting
+- More challenging coordination problem
+
+**Why this matters:**
+- Robots must learn priority-aware coverage allocation
+- Trade-off: cover everywhere vs focus on hotspots
+- Decay forces dynamic behavior (can't just sweep once)
+- Real-world: high-value targets, surveillance priorities
+
+![Priority Map](output/search_v3_priority_map.png)
+*Gaussian mixture priority map - bright areas are high-value regions*
+
+**Previous (v0.16 alpha):**
 
 Added a second game for testing neurosymbolic distillation on coordinated multi-agent systems:
 
@@ -87,16 +110,17 @@ A_UP    = (nearest_angle × -32.68) × reward_counter
 - Optimal: greedy nearest-neighbor (1306 points)
 - NN achieves: 1346 points (+40, 103%)
 
-### 2. Multi-Robot Area Coverage (NEW v0.16)
+### 2. Multi-Robot Area Coverage (v0.16-0.17)
 - **50×50 nmi continuous space** (500×500 grid)
-- **1-10 coordinated robots** with sensors
-- Lattice formation ingress from south
-- Coverage decay encourages revisiting
-- Score: Cumulative coverage sum over time
+- **1-10 coordinated robots** with 20 nmi sensors
+- **Priority map**: Gaussian mixture defines hotspots
+- Clump formation ingress from south
+- Coverage decay (0.97) encourages revisiting
+- Score: Σ(Coverage × Priority) over time
 
-![Multi-Robot Search](output/search_v2_final.png)
+![Multi-Robot Search](output/search_v3_final_weighted.png)
 
-*6 robots (cyan) performing coordinated area search with 20 nmi sensor range*
+*6 robots performing priority-aware area search. Bright areas = high-priority coverage*
 
 ## State Representation
 
@@ -371,10 +395,8 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.17 alpha**: Priority map system (Gaussian mixture hotspots), clump formation, 0.97 decay
 - **v0.16 alpha**: Multi-robot area coverage game with coordinated control
 - **v0.15 alpha**: PySR symbolic regression fixed with advantage-based formulas (1306 points)
 - **v0.14 alpha**: RL agent surpasses greedy heuristic (1346 vs 1306)
 - **v0.13 alpha**: Enhanced state representation (22 features), reward shaping
-- **v0.12 alpha**: Learning curve visualization, high-res GIFs
-- **v0.11 alpha**: Version numbering system
-- **v0.10 alpha**: State correction, expanded NN architecture
