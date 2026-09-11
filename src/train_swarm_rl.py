@@ -281,10 +281,10 @@ def train_swarm_agent(n_episodes=200, max_steps=30, eval_every=20, verbose=True)
         num_robots=3,  # Fewer robots for speed
         sensor_range=20.0,
         sensor_fov_degrees=90,
-        decay_rate=0.97,
+        decay_rate=0.95,  # Faster decay (5% per timestep)
         ingress_formation='clump',
         colormap='inferno',
-        num_priority_blobs=5,
+        num_priority_blobs=5,  # Variable 5-12 now in game code
         seed=42
     )
 
@@ -374,7 +374,7 @@ def train_swarm_agent(n_episodes=200, max_steps=30, eval_every=20, verbose=True)
                     num_robots=3,  # Match training robots
                     sensor_range=20.0,
                     sensor_fov_degrees=90,
-                    decay_rate=0.97,
+                    decay_rate=0.95,  # Match training decay
                     ingress_formation='clump',
                     colormap='inferno',
                     num_priority_blobs=5,

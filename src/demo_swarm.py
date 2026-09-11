@@ -120,10 +120,10 @@ def main():
         num_robots=3,
         sensor_range=20.0,
         sensor_fov_degrees=90,
-        decay_rate=0.97,
+        decay_rate=0.95,  # Faster decay (5% per timestep)
         ingress_formation='clump',
         colormap='inferno',
-        num_priority_blobs=5,
+        num_priority_blobs=5,  # Variable 5-12 now
         seed=42
     )
 
@@ -139,7 +139,7 @@ def main():
         num_robots=3,
         sensor_range=20.0,
         sensor_fov_degrees=90,
-        decay_rate=0.97,
+        decay_rate=0.95,  # Match decay rate
         ingress_formation='clump',
         colormap='inferno',
         num_priority_blobs=5,

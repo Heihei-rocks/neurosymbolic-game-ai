@@ -34,7 +34,7 @@ class MultiRobotSearchGame:
                  num_robots=None,
                  sensor_range=20.0,  # nmi (increased from 5.0)
                  sensor_fov_degrees=90,
-                 decay_rate=0.97,  # Changed from 0.99 to 0.97 (faster decay)
+                 decay_rate=0.95,  # Changed from 0.97 to 0.95 (faster decay - 5% per timestep)
                  ingress_formation='clump',  # Changed from 'lattice' to 'clump'
                  colormap='inferno',  # inferno, bone, jet, plasma, viridis
                  num_priority_blobs=5,  # Number of Gaussian blobs for priority map
@@ -108,30 +108,39 @@ class MultiRobotSearchGame:
         """
         Generate priority map as mixture of random Gaussian blobs.
 
+        More complex and varied per game:
+        - Variable number of blobs (5-12)
+        - Wider range of sizes (narrow to very wide)
+        - More varied intensities
+        - Additive blending (not just max) for overlaps
+
         Returns:
             Priority map (grid_size x grid_size) with values [0, 1]
         """
         priority_map = np.zeros((self.grid_size, self.grid_size), dtype=np.float32)
 
+        # Variable number of blobs per game
+        num_blobs = random.randint(5, 12)
+
         # Generate random Gaussian blobs
-        for _ in range(self.num_priority_blobs):
+        for _ in range(num_blobs):
             # Random center position (in pixels)
             center_x = random.randint(0, self.grid_size - 1)
             center_y = random.randint(0, self.grid_size - 1)
 
-            # Random sigma (spread) - range from narrow to wide blobs
-            sigma = random.uniform(30, 100)  # pixels
+            # Random sigma (spread) - wider range from very narrow to very wide
+            sigma = random.uniform(20, 150)  # pixels (was 30-100)
 
-            # Random intensity
-            intensity = random.uniform(0.3, 1.0)
+            # Random intensity - wider range
+            intensity = random.uniform(0.2, 1.0)  # (was 0.3-1.0)
 
             # Generate Gaussian blob
             y_coords, x_coords = np.ogrid[:self.grid_size, :self.grid_size]
             dist_squared = (x_coords - center_x)**2 + (y_coords - center_y)**2
             blob = intensity * np.exp(-dist_squared / (2 * sigma**2))
 
-            # Add to priority map
-            priority_map = np.maximum(priority_map, blob)
+            # Additive blending (allows overlaps to create higher priority regions)
+            priority_map += blob
 
         # Normalize to [0, 1]
         if priority_map.max() > 0:
