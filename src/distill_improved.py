@@ -90,7 +90,10 @@ def distill_to_decision_tree(states, actions, max_depth=8):
         'pos_x', 'pos_y',
         'green_N', 'green_S', 'green_E', 'green_W',
         'red_N', 'red_S', 'red_E', 'red_W',
-        'remaining', 'dist_nearest'
+        'remaining', 'dist_nearest',
+        'nearest_dx', 'nearest_dy', 'nearest_angle', 'nearest_manhattan',
+        'reward_counter', 'dist_delta',
+        'target2_dx', 'target2_dy', 'target3_dx', 'target3_dy'
     ]
     tree_rules = export_text(tree, feature_names=feature_names, max_depth=5)
     print("\n  Decision Tree Rules (first 5 levels):")

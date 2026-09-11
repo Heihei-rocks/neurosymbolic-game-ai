@@ -22,7 +22,7 @@ def get_version():
             return f"{commit_count}.0{commit_count % 10}"  # Simple version scheme
     return "0.10"
 
-os.chdir('/Users/djohnson334/neurosymbolic-game-ai')
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import sys
 sys.path.insert(0, 'src')
@@ -153,8 +153,12 @@ def create_scored_gif(policy_name, seed, green_count=50):
             action = random.randint(0, 3)
         elif policy_name == 'heuristic':
             action = behavior(state)
-        else:  # nn
-            action = int(model.predict([state])[0])
+        else:  # nn - use RL agent
+            if not hasattr(create_scored_gif, 'rl_agent'):
+                from train_rl import load_agent
+                create_scored_gif.rl_agent = load_agent('src/game_model_rl.joblib')
+            q_values = create_scored_gif.rl_agent.model.predict(state.reshape(1, -1))[0]
+            action = int(np.argmax(q_values[:4]))
         
         # Execute
         score_before = game.score
