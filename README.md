@@ -1,10 +1,47 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.26 alpha** 🏗️ *Early development*
+**v0.27 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.26 alpha
+## Release Notes v0.27 alpha
+
+**20x Longer Episodes + Enhanced Cognitive Features 🧠**
+
+Major improvements to learning capability through extended missions and richer state representation:
+
+**Configuration Changes:**
+- Episode length: 150 → 3000 steps (20x longer for sustained missions)
+- Priority maps: Randomized per episode (8-15 Gaussian blobs each game)
+- Enhanced state representation: ~191 → ~230 features with cognitive artifacts
+- Network: (256, 128, 64), batch 64, lr 0.001→0.0002
+- Training generates: 1,500,000 experiences (500 episodes × 3000 steps)
+
+**New Cognitive Artifacts Added to Neural Network Input:**
+1. **Ego-centric navigation**: Relative bearing to targets (not just absolute direction)
+2. **Local coverage gradients**: Weighted coverage in 4 cardinal directions per robot
+3. **Priority-weighted remaining work**: How much high-value area is uncovered
+4. **Team spatial entropy**: Clustering metric (spread vs concentrated)
+5. **Recent score velocity**: Performance trend (improving vs declining)
+6. **Nearest teammate vectors**: Direction to closest ally per robot
+
+**Why These Features Help:**
+- **Ego-centric bearings**: Robot knows "turn left 30°" not just "target is northeast"
+- **Coverage gradients**: Can sense which direction offers better opportunities
+- **Remaining work**: Helps prioritize effort when mission nears completion
+- **Spatial entropy**: Encourages spreading out vs clustering
+- **Score velocity**: Adaptive behavior based on recent performance
+- **Teammate awareness**: Better coordination and collision avoidance
+
+**Expected Improvements:**
+- Better long-horizon planning (20x longer episodes)
+- Improved coordination through richer spatial awareness
+- More adaptive policies via performance feedback
+- Enhanced exploration through gradient information
+
+**Results:** (Training in progress...)
+
+**Previous (v0.26 alpha):**
 
 **5x Longer Episodes: Better Long-Term Planning 🎯**
 
@@ -457,6 +494,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.27 alpha**: 20x longer episodes (3000 steps), enhanced cognitive features (~230 state dims), randomized priority maps per episode, ego-centric navigation
 - **v0.26 alpha**: 5x longer episodes (150 steps), 8-15 priority blobs, +15.7% improvement, 3.6x higher sustained scores
 - **v0.25 alpha**: Loss analysis - rising loss is normal Q-learning behavior, correlates with better performance
 - **v0.24 alpha**: Option A training - 500 episodes, (256,128,64) network, batch 64, lr 0.001, +13.7% improvement

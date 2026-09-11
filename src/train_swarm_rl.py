@@ -88,7 +88,7 @@ class SwarmQLearningAgent:
 
     def get_state_representation(self, game):
         """
-        Extract comprehensive state representation for RL.
+        Extract comprehensive state representation for RL with enhanced cognitive artifacts.
 
         Includes:
         - Robot states (position, heading) - normalized
@@ -97,6 +97,14 @@ class SwarmQLearningAgent:
         - Coverage age (for decay awareness)
         - Inter-robot distances
         - Nearest high-priority uncovered regions
+
+        NEW COGNITIVE ARTIFACTS:
+        - Ego-centric target vectors per robot
+        - Local coverage gradients (4 directions per robot)
+        - Priority-weighted remaining work estimate
+        - Team spatial entropy (clustering metric)
+        - Recent score velocity (performance trend)
+        - Nearest teammate direction per robot
         """
         state_parts = []
 
@@ -144,6 +152,7 @@ class SwarmQLearningAgent:
         # 7. For each robot: direction to nearest high-priority low-coverage area
         for robot_idx in range(game.num_robots):
             robot_x, robot_y = game.robots[robot_idx, 0:2]
+            robot_heading = game.robots[robot_idx, 2]
             robot_x_px = int(robot_x / game.nmi_per_pixel)
             robot_y_px = int(robot_y / game.nmi_per_pixel)
 
@@ -163,11 +172,94 @@ class SwarmQLearningAgent:
                 dx = (target_x_px - robot_x_px) / game.grid_size
                 dy = (target_y_px - robot_y_px) / game.grid_size
                 dist = distances[nearest_idx] / game.grid_size
-            else:
-                # No targets - just use current heading
-                dx, dy, dist = 0, 0, 0
 
-            state_parts.extend([dx, dy, dist])
+                # NEW: Ego-centric bearing to target (relative to robot heading)
+                angle_to_target = np.arctan2(dy, dx)
+                relative_bearing = angle_to_target - robot_heading
+                # Normalize to [-pi, pi]
+                relative_bearing = (relative_bearing + np.pi) % (2 * np.pi) - np.pi
+                bearing_norm = relative_bearing / np.pi
+            else:
+                # No targets
+                dx, dy, dist, bearing_norm = 0, 0, 0, 0
+
+            state_parts.extend([dx, dy, dist, bearing_norm])
+
+        # 8. NEW: Local coverage gradients per robot (4 directions: N, S, E, W)
+        gradient_radius_px = 20  # Look 20 pixels in each direction
+        for robot_idx in range(game.num_robots):
+            robot_x_px = int(game.robots[robot_idx, 0] / game.nmi_per_pixel)
+            robot_y_px = int(game.robots[robot_idx, 1] / game.nmi_per_pixel)
+
+            # Sample coverage in 4 cardinal directions
+            gradients = []
+            for direction in [(0, -1), (0, 1), (1, 0), (-1, 0)]:  # N, S, E, W
+                sample_x = robot_x_px + direction[0] * gradient_radius_px
+                sample_y = robot_y_px + direction[1] * gradient_radius_px
+
+                # Clamp to bounds
+                sample_x = np.clip(sample_x, 0, game.grid_size - 1)
+                sample_y = np.clip(sample_y, 0, game.grid_size - 1)
+
+                # Get priority-weighted coverage at sample point
+                coverage_value = game.coverage[sample_y, sample_x]
+                priority_value = game.priority_map[sample_y, sample_x]
+                weighted_value = coverage_value * priority_value
+                gradients.append(weighted_value)
+
+            state_parts.extend(gradients)
+
+        # 9. NEW: Priority-weighted remaining work
+        uncovered_priority = np.sum(game.priority_map * (1.0 - game.coverage))
+        total_priority = np.sum(game.priority_map)
+        remaining_work = uncovered_priority / (total_priority + 1e-6)
+        state_parts.append(remaining_work)
+
+        # 10. NEW: Team spatial entropy (are robots spread out or clustered?)
+        robot_positions = game.robots[:, 0:2]
+        if game.num_robots > 1:
+            # Calculate pairwise distances
+            pairwise_dists = []
+            for i in range(game.num_robots):
+                for j in range(i + 1, game.num_robots):
+                    dx = robot_positions[i, 0] - robot_positions[j, 0]
+                    dy = robot_positions[i, 1] - robot_positions[j, 1]
+                    dist = np.sqrt(dx**2 + dy**2)
+                    pairwise_dists.append(dist)
+
+            # Std of distances = measure of spread (high = spread out, low = clustered)
+            spatial_entropy = np.std(pairwise_dists) / game.world_size_nmi
+        else:
+            spatial_entropy = 0.0
+        state_parts.append(spatial_entropy)
+
+        # 11. NEW: Recent score velocity (is performance improving?)
+        if len(game.coverage_sum_history) >= 3:
+            # Compare last 2 timesteps
+            recent_velocity = game.coverage_sum_history[-1] - game.coverage_sum_history[-2]
+        else:
+            recent_velocity = 0.0
+        state_parts.append(recent_velocity / 1000.0)  # Normalize
+
+        # 12. NEW: For each robot, direction to nearest teammate
+        for robot_idx in range(game.num_robots):
+            if game.num_robots > 1:
+                robot_pos = game.robots[robot_idx, 0:2]
+                other_robots = np.delete(game.robots[:, 0:2], robot_idx, axis=0)
+
+                # Find nearest teammate
+                distances = np.sqrt(np.sum((other_robots - robot_pos)**2, axis=1))
+                nearest_teammate_idx = np.argmin(distances)
+                nearest_teammate_pos = other_robots[nearest_teammate_idx]
+
+                # Direction to teammate (normalized)
+                dx_teammate = (nearest_teammate_pos[0] - robot_pos[0]) / game.world_size_nmi
+                dy_teammate = (nearest_teammate_pos[1] - robot_pos[1]) / game.world_size_nmi
+                dist_teammate = distances[nearest_teammate_idx] / game.world_size_nmi
+            else:
+                dx_teammate, dy_teammate, dist_teammate = 0, 0, 0
+
+            state_parts.extend([dx_teammate, dy_teammate, dist_teammate])
 
         return np.array(state_parts, dtype=np.float32)
 
@@ -280,12 +372,12 @@ class SwarmQLearningAgent:
             self.model.learning_rate_init = self.current_lr
 
 
-def train_swarm_agent(n_episodes=500, max_steps=150, eval_every=50, verbose=True):
+def train_swarm_agent(n_episodes=500, max_steps=3000, eval_every=50, verbose=True):
     """
     Train Q-learning agent for multi-robot search.
 
     Args:
-        n_episodes: Number of training episodes
+        n_episodes: Number of training episodes (20x longer episodes for long-horizon learning)
         max_steps: Maximum steps per episode
         eval_every: Evaluate every N episodes
         verbose: Print progress
@@ -385,9 +477,9 @@ def train_swarm_agent(n_episodes=500, max_steps=150, eval_every=50, verbose=True
 
         # Evaluation
         if (episode + 1) % eval_every == 0:
-            # Test without exploration
+            # Test without exploration on 20 games for robust evaluation
             test_scores = []
-            for test_seed in range(5):
+            for test_seed in range(20):  # Increased from 5 to 20 for more robust eval
                 test_game = MultiRobotSearchGame(
                     world_size_nmi=50.0,
                     grid_size=50,  # Match training grid
@@ -444,7 +536,7 @@ if __name__ == "__main__":
     # Train
     agent, train_scores, eval_scores = train_swarm_agent(
         n_episodes=500,
-        max_steps=150,  # 5x longer episodes for better learning
+        max_steps=3000,  # 20x longer episodes for long-term strategy learning
         eval_every=50,
         verbose=True
     )

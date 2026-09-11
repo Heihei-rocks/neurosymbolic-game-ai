@@ -93,7 +93,7 @@ class MultiRobotSearchGame:
         # Game state
         self.timestep = 0
         self.done = False
-        self.max_timesteps = 100
+        self.max_timesteps = 3000  # 20x longer for sustained missions
 
         # Scoring: cumulative sum of all coverage values over time
         self.score = 0.0
@@ -189,7 +189,10 @@ class MultiRobotSearchGame:
         return np.array(robots)
 
     def reset(self):
-        """Reset the game to initial state."""
+        """Reset the game to initial state with NEW priority map."""
+        # Regenerate priority map for each episode (ensures variety)
+        self.priority_map = self._generate_priority_map()
+
         # Reinitialize robot formation
         self.robots = self._init_robots_formation()
 
