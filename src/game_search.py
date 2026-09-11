@@ -481,7 +481,7 @@ class MultiRobotSearchGame:
         draw = ImageDraw.Draw(img)
 
         for robot_idx in range(self.num_robots):
-            # Draw trail (blue, fading)
+            # Draw trail (light blue, fading to transparent)
             history = self.position_history[robot_idx]
             if len(history) > 1:
                 for i in range(len(history) - 1):
@@ -493,17 +493,17 @@ class MultiRobotSearchGame:
                     x2_px = int(x2_nmi / self.nmi_per_pixel)
                     y2_px = self.grid_size - 1 - int(y2_nmi / self.nmi_per_pixel)
 
-                    # Fade from oldest (transparent) to newest (opaque)
-                    age = len(history) - 1 - i
-                    alpha = int(255 * (1.0 - age / len(history)))
-                    # Convert to hex color with alpha
-                    # Use PIL's alpha by drawing on RGBA layer
+                    # Fade from oldest (transparent) to newest (more opaque)
+                    # Newer positions have higher opacity
+                    opacity = (i + 1) / len(history)  # 0 (oldest) to 1 (newest)
 
-                    # For now, draw with decreasing opacity using overlay
-                    opacity = 1.0 - age / len(history)
-                    color_val = int(255 * opacity)
+                    # Light blue (100, 200, 255) fading with opacity
+                    r = int(100 * opacity)
+                    g = int(200 * opacity)
+                    b = int(255 * opacity)
+
                     draw.line([x1_px, y1_px, x2_px, y2_px],
-                             fill=(0, int(150 * opacity), int(255 * opacity)),
+                             fill=(r, g, b),
                              width=2)
 
             # Current robot position
@@ -512,8 +512,8 @@ class MultiRobotSearchGame:
             y_px = self.grid_size - 1 - int(y_nmi / self.nmi_per_pixel)
 
             # Draw arrowhead pointing in direction of motion
-            arrow_length = 8
-            arrow_width = 5
+            arrow_length = 12
+            arrow_width = 7
 
             # Arrow tip (front)
             tip_x = x_px + arrow_length * np.cos(heading)
@@ -526,11 +526,13 @@ class MultiRobotSearchGame:
             base_x2 = x_px - arrow_length * 0.5 * np.cos(heading) - arrow_width * np.cos(perp_angle)
             base_y2 = y_px + arrow_length * 0.5 * np.sin(heading) + arrow_width * np.sin(perp_angle)
 
-            # Draw filled arrowhead (cyan)
+            # Draw filled arrowhead - darker cyan/blue (20% darker than 0,255,255)
+            # Original cyan: (0, 255, 255), 20% darker: (0, 204, 204)
             draw.polygon(
                 [(tip_x, tip_y), (base_x1, base_y1), (base_x2, base_y2)],
-                fill=(0, 255, 255),
-                outline=(255, 255, 255)
+                fill=(0, 204, 204),
+                outline=(255, 255, 255),
+                width=2
             )
 
         if save_path:

@@ -113,10 +113,10 @@ def main():
     print(f"✓ Agent loaded (state_dim={agent.state_dim}, robots={agent.num_robots})")
     print()
 
-    # Create game
+    # Create game (FULL RESOLUTION: 500×500 grid for animations)
     game = MultiRobotSearchGame(
         world_size_nmi=50.0,
-        grid_size=50,
+        grid_size=500,  # Full resolution for animations
         num_robots=3,
         sensor_range=20.0,
         sensor_fov_degrees=90,
@@ -131,9 +131,20 @@ def main():
     print("Running random policy...")
     random_score = run_episode(None, game, policy_type='random', max_steps=30, save_gif=True)
 
-    # Run trained policy
+    # Run trained policy (reset seed for fair comparison)
     print("Running trained policy...")
-    game.seed = 42  # Same seed for fair comparison
+    game = MultiRobotSearchGame(
+        world_size_nmi=50.0,
+        grid_size=500,  # Full resolution
+        num_robots=3,
+        sensor_range=20.0,
+        sensor_fov_degrees=90,
+        decay_rate=0.97,
+        ingress_formation='clump',
+        colormap='inferno',
+        num_priority_blobs=5,
+        seed=42  # Same seed for fair comparison
+    )
     trained_score = run_episode(agent, game, policy_type='trained', max_steps=30, save_gif=True)
 
     # Summary

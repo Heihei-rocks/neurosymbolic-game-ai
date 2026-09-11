@@ -1,30 +1,34 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.21 alpha** 🏗️ *Early development*
+**v0.22 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.21 alpha
+## Release Notes v0.22 alpha
 
-**Full-Resolution Animations with Trails and Directional Arrows! 🎬**
+**True Full-Resolution: 500×500 Grid Animations! 🎯**
 
-Major animation quality improvements:
+Fixed resolution and improved visual quality:
 
-**Visual Enhancements:**
-- Full resolution animations: now using 50×50 pixel grid (not downsampled)
-- Blue fading trails: semi-transparent paths showing where robots have been (30 position history)
-- Arrowhead icons: replaced circles with directional arrows showing heading
-- Trail fade-out: older positions fade to transparency over time
+**Resolution Corrections:**
+- **500×500 pixel animations** (was incorrectly using 50×50 training grid)
+- Matches actual SA and priority map resolution
+- File sizes: 1.2-1.3MB (vs 124KB before)
 
-**Why this matters:**
-- Full resolution matches priority map and coverage matrix quality
-- Trails reveal exploration patterns and coordination strategies
-- Directional arrows make heading/motion immediately clear
-- Much easier to analyze trained vs random behavior visually
+**Visual Refinements:**
+- Light blue trails (100, 200, 255 RGB) fading to transparent
+- Darker cyan arrowheads (0, 204, 204) - 20% darker for better contrast
+- White outline on arrows maintained for clarity
+- Larger arrows (12px length, 7px width) scaled for 500×500 grid
 
-**Previous (v0.20 alpha):**
+**Performance Update (500×500 grid):**
+- Random baseline: **544,190**
+- Trained agent: **811,056** (+49.0% improvement!)
+- Significantly better performance demonstration at full scale
 
-Enhanced priority overlay visibility (50% opacity), clearer visualization of unseen high-priority areas
+**Previous (v0.21 alpha):**
+
+Full-resolution animations with trails and arrowheads (but used wrong grid size - fixed now)
 
 **Training Infrastructure:**
 - Q-learning with experience replay for 3-robot swarm
@@ -426,7 +430,8 @@ neurosymbolic-game-ai/
 
 ## Version History
 
-- **v0.21 alpha**: Full-resolution animations (50×50), blue fading trails, arrowhead icons showing heading
+- **v0.22 alpha**: True 500×500 resolution animations, light blue fading trails, darker cyan arrows, +49% trained vs random
+- **v0.21 alpha**: Full-resolution animations with trails and arrowheads (used 50×50 by mistake)
 - **v0.20 alpha**: Enhanced priority overlay visibility (50% opacity), clearer visualization of unseen high-priority areas
 - **v0.19 alpha**: Fixed sensor FOV direction (was backward!), coordinate system (y=0 at bottom), boundary clamping, robot icon sizing
 - **v0.18 alpha**: Multi-robot swarm RL training complete (3 robots, 50×50 grid, 36K score)
