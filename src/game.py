@@ -13,14 +13,25 @@ class GridGame:
         self.green = {(random.randint(0,self.w-1), random.randint(0,self.h-1)) for _ in range(green_count)}
         self.red = {(random.randint(0,self.w-1), random.randint(0,self.h-1)) for _ in range(5)} if self.red_enabled else set()
         self.obstacles = set()
+        self.prev_dist_to_nearest = 0  # Track previous distance for reward shaping
 
     def get_state(self):
         """
-        Enhanced state with 16 features: position, nearby boxes, remaining, distance, and DIRECTION to nearest green.
+        Enhanced state with 22 features including reward counter, distance delta, and multiple targets.
 
         Returns:
-            numpy array [pos_x, pos_y, green_N/S/E/W, red_N/S/E/W, remaining, dist,
-                         nearest_dx, nearest_dy, nearest_angle, nearest_manhattan]
+            numpy array with:
+            [0-1]   pos_x, pos_y
+            [2-5]   green_N/S/E/W (adjacent)
+            [6-9]   red_N/S/E/W (adjacent)
+            [10]    remaining boxes
+            [11]    euclidean distance to nearest
+            [12-13] direction vector (dx, dy) to nearest
+            [14]    angle to nearest
+            [15]    manhattan distance to nearest
+            [16]    reward_counter (TIME PRESSURE - CRITICAL!)
+            [17]    distance_delta (am I getting closer? - CRITICAL!)
+            [18-21] 2nd and 3rd nearest targets (dx, dy)
         """
         gn = int((self.x, self.y-1) in self.green and (self.x, self.y-1) not in self.collected_green)
         gs = int((self.x, self.y+1) in self.green and (self.x, self.y+1) not in self.collected_green)
@@ -31,55 +42,134 @@ class GridGame:
         re = int((self.x+1, self.y) in self.red and (self.x+1, self.y) not in self.collected_red) if self.red_enabled else 0
         rw = int((self.x-1, self.y) in self.red and (self.x-1, self.y) not in self.collected_red) if self.red_enabled else 0
 
+        # Get sorted list of uncollected greens by distance
         greens = [(gx, gy) for gx, gy in self.green if (gx, gy) not in self.collected_green]
+
         if greens:
-            gx, gy = min(greens, key=lambda b: (b[0]-self.x)**2 + (b[1]-self.y)**2)
+            # Sort by distance to get nearest 3
+            sorted_greens = sorted(greens, key=lambda b: (b[0]-self.x)**2 + (b[1]-self.y)**2)
+
+            # Nearest green
+            gx, gy = sorted_greens[0]
             dist = ((gx-self.x)**2 + (gy-self.y)**2)**0.5
-            # Direction to nearest green (normalized)
-            dx = (gx - self.x) / self.w  # Normalized delta x
-            dy = (gy - self.y) / self.h  # Normalized delta y
-            # Angle to nearest green (helps NN understand direction)
+            dx = (gx - self.x) / self.w
+            dy = (gy - self.y) / self.h
             import math
-            angle = math.atan2(dy, dx) / math.pi  # Normalized to [-1, 1]
+            angle = math.atan2(dy, dx) / math.pi
             manhattan = (abs(gx - self.x) + abs(gy - self.y)) / (self.w + self.h)
+
+            # Distance delta (am I getting closer?)
+            dist_delta = (self.prev_dist_to_nearest - dist) / 32
+
+            # 2nd nearest green (if exists)
+            if len(sorted_greens) > 1:
+                g2x, g2y = sorted_greens[1]
+                dx2 = (g2x - self.x) / self.w
+                dy2 = (g2y - self.y) / self.h
+            else:
+                dx2 = dy2 = 0
+
+            # 3rd nearest green (if exists)
+            if len(sorted_greens) > 2:
+                g3x, g3y = sorted_greens[2]
+                dx3 = (g3x - self.x) / self.w
+                dy3 = (g3y - self.y) / self.h
+            else:
+                dx3 = dy3 = 0
+
         else:
-            dist = 0
-            dx = 0
-            dy = 0
-            angle = 0
-            manhattan = 0
+            dist = dx = dy = angle = manhattan = 0
+            dist_delta = 0
+            dx2 = dy2 = dx3 = dy3 = 0
 
         return np.array([
-            self.x/self.w, self.y/self.h,           # Position [0-1]
-            gn, gs, ge, gw,                         # Green adjacent [2-5]
-            rn, rs, re, rw,                         # Red adjacent [6-9]
-            len(self.green)-len(self.collected_green),  # Remaining [10]
-            dist/32,                                 # Euclidean distance [11]
-            dx, dy,                                  # Direction vector [12-13]
-            angle,                                   # Angle to target [14]
-            manhattan                                # Manhattan distance [15]
+            self.x/self.w, self.y/self.h,                    # [0-1] Position
+            gn, gs, ge, gw,                                  # [2-5] Green adjacent
+            rn, rs, re, rw,                                  # [6-9] Red adjacent
+            len(self.green)-len(self.collected_green),       # [10] Remaining
+            dist/32,                                         # [11] Distance to nearest
+            dx, dy,                                          # [12-13] Direction to nearest
+            angle,                                           # [14] Angle
+            manhattan,                                       # [15] Manhattan
+            self.reward_counter / 100,                       # [16] ⭐ TIME PRESSURE
+            dist_delta,                                      # [17] ⭐ Distance change
+            dx2, dy2,                                        # [18-19] 2nd nearest
+            dx3, dy3                                         # [20-21] 3rd nearest
         ], dtype=np.float32)
 
     def step(self, action):
-        if self.done or self.reward_counter <= 0: return self.get_state(), 0, True, {}
+        if self.done or self.reward_counter <= 0:
+            return self.get_state(), 0, True, {'turn': self.turn, 'score': self.score}
+
+        # Calculate distance to nearest green BEFORE move
+        greens = [(gx, gy) for gx, gy in self.green if (gx, gy) not in self.collected_green]
+        if greens:
+            gx, gy = min(greens, key=lambda b: (b[0]-self.x)**2 + (b[1]-self.y)**2)
+            dist_before = ((gx-self.x)**2 + (gy-self.y)**2)**0.5
+        else:
+            dist_before = 0
+
+        # Execute move
         reward = self.reward_counter
         self.reward_counter = max(0, self.reward_counter - 1)
         dx, dy = {0: (0,-1), 1: (0,1), 2: (-1,0), 3: (1,0)}[action]
         old_x, old_y = self.x, self.y
         self.x = max(0, min(self.w-1, self.x + dx))
         self.y = max(0, min(self.h-1, self.y + dy))
-        if (self.x, self.y) in self.obstacles: self.x, self.y = old_x, old_y
+        if (self.x, self.y) in self.obstacles:
+            self.x, self.y = old_x, old_y
+
+        # Calculate distance to nearest green AFTER move
+        greens = [(gx, gy) for gx, gy in self.green if (gx, gy) not in self.collected_green]
+        if greens:
+            gx, gy = min(greens, key=lambda b: (b[0]-self.x)**2 + (b[1]-self.y)**2)
+            dist_after = ((gx-self.x)**2 + (gy-self.y)**2)**0.5
+        else:
+            dist_after = 0
+
+        # Store for next state
+        self.prev_dist_to_nearest = dist_after
+
+        # REWARD SHAPING: Small reward for moving closer to target
+        shaped_reward = 0
+        if greens:  # Only shape reward if there are boxes left
+            if dist_after < dist_before:
+                shaped_reward = 0.1  # Moving closer
+            elif dist_after > dist_before:
+                shaped_reward = -0.1  # Moving farther
+
+        # Main reward from collecting boxes
+        main_reward = 0
         if (self.x, self.y) in self.green and (self.x, self.y) not in self.collected_green:
-            self.score += reward; self.collected_green.add((self.x, self.y))
+            main_reward = reward
+            self.score += reward
+            self.collected_green.add((self.x, self.y))
         elif (self.x, self.y) in self.red and (self.x, self.y) not in self.collected_red:
-            self.score -= reward; self.collected_red.add((self.x, self.y))
+            main_reward = -reward
+            self.score -= reward
+            self.collected_red.add((self.x, self.y))
+
         self.turn += 1
-        if self.reward_counter <= 0 or len(self.collected_green) >= len(self.green): self.done = True
-        return self.get_state(), reward-1, self.done, {'turn': self.turn, 'score': self.score}
+        if self.reward_counter <= 0 or len(self.collected_green) >= len(self.green):
+            self.done = True
+
+        # Total reward = main reward + shaped reward
+        total_reward = main_reward + shaped_reward
+
+        return self.get_state(), total_reward, self.done, {'turn': self.turn, 'score': self.score}
 
     def reset(self, seed=None):
         if seed is not None: random.seed(seed); np.random.seed(seed)
         self.__init__(seed=seed if seed else 42)
+
+        # Initialize prev_dist_to_nearest
+        greens = [(gx, gy) for gx, gy in self.green if (gx, gy) not in self.collected_green]
+        if greens:
+            gx, gy = min(greens, key=lambda b: (b[0]-self.x)**2 + (b[1]-self.y)**2)
+            self.prev_dist_to_nearest = ((gx-self.x)**2 + (gy-self.y)**2)**0.5
+        else:
+            self.prev_dist_to_nearest = 0
+
         return self.get_state()
 
 
