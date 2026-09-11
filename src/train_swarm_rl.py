@@ -280,7 +280,7 @@ class SwarmQLearningAgent:
             self.model.learning_rate_init = self.current_lr
 
 
-def train_swarm_agent(n_episodes=500, max_steps=30, eval_every=50, verbose=True):
+def train_swarm_agent(n_episodes=500, max_steps=150, eval_every=50, verbose=True):
     """
     Train Q-learning agent for multi-robot search.
 
@@ -444,7 +444,7 @@ if __name__ == "__main__":
     # Train
     agent, train_scores, eval_scores = train_swarm_agent(
         n_episodes=500,
-        max_steps=30,
+        max_steps=150,  # 5x longer episodes for better learning
         eval_every=50,
         verbose=True
     )

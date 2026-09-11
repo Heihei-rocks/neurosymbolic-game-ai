@@ -119,8 +119,8 @@ class MultiRobotSearchGame:
         """
         priority_map = np.zeros((self.grid_size, self.grid_size), dtype=np.float32)
 
-        # Variable number of blobs per game
-        num_blobs = random.randint(5, 12)
+        # Variable number of blobs per game (increased for more complexity)
+        num_blobs = random.randint(8, 15)  # More blobs (was 5-12)
 
         # Generate random Gaussian blobs
         for _ in range(num_blobs):
