@@ -1,29 +1,30 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.20 alpha** 🏗️ *Early development*
+**v0.21 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.20 alpha
+## Release Notes v0.21 alpha
 
-**Enhanced Priority Map Visualization! 👁️**
+**Full-Resolution Animations with Trails and Directional Arrows! 🎬**
 
-Improved priority overlay visibility in animations:
+Major animation quality improvements:
 
-**Visualization Enhancements:**
-- Increased priority overlay opacity: 30% → 50% for better visibility
-- White grayscale overlay now clearly shows high-priority unseen areas
-- Animations properly display: SA×Priority (colormap) + Priority overlay (white transparent)
-- Easier to see which high-value regions remain unseen by robots
+**Visual Enhancements:**
+- Full resolution animations: now using 50×50 pixel grid (not downsampled)
+- Blue fading trails: semi-transparent paths showing where robots have been (30 position history)
+- Arrowhead icons: replaced circles with directional arrows showing heading
+- Trail fade-out: older positions fade to transparency over time
 
 **Why this matters:**
-- Users can now clearly identify which high-priority areas need coverage
-- Visual feedback shows the trade-off between exploration and priority-seeking
-- Critical for understanding trained swarm behavior and coordination strategies
+- Full resolution matches priority map and coverage matrix quality
+- Trails reveal exploration patterns and coordination strategies
+- Directional arrows make heading/motion immediately clear
+- Much easier to analyze trained vs random behavior visually
 
-**Previous (v0.19 alpha):**
+**Previous (v0.20 alpha):**
 
-Swarm rendering fixes - sensor FOV direction corrected (was backward!), coordinate system fixed (y=0 at bottom), boundary clamping, robot icon sizing
+Enhanced priority overlay visibility (50% opacity), clearer visualization of unseen high-priority areas
 
 **Training Infrastructure:**
 - Q-learning with experience replay for 3-robot swarm
@@ -425,6 +426,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.21 alpha**: Full-resolution animations (50×50), blue fading trails, arrowhead icons showing heading
 - **v0.20 alpha**: Enhanced priority overlay visibility (50% opacity), clearer visualization of unseen high-priority areas
 - **v0.19 alpha**: Fixed sensor FOV direction (was backward!), coordinate system (y=0 at bottom), boundary clamping, robot icon sizing
 - **v0.18 alpha**: Multi-robot swarm RL training complete (3 robots, 50×50 grid, 36K score)

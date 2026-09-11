@@ -100,6 +100,10 @@ class MultiRobotSearchGame:
         self.score_history = []
         self.coverage_sum_history = []
 
+        # Position history for trails (list of lists, one per robot)
+        self.position_history = [[] for _ in range(self.num_robots)]
+        self.max_trail_length = 30  # Keep last 30 positions for trails
+
     def _generate_priority_map(self):
         """
         Generate priority map as mixture of random Gaussian blobs.
@@ -186,6 +190,9 @@ class MultiRobotSearchGame:
         self.score = 0.0
         self.score_history = []
         self.coverage_sum_history = []
+
+        # Clear position history
+        self.position_history = [[] for _ in range(self.num_robots)]
 
         # Apply initial sensor coverage
         self._update_coverage()
@@ -293,6 +300,12 @@ class MultiRobotSearchGame:
             # Clamp to boundaries (no wrap-around)
             self.robots[robot_idx, 0] = np.clip(self.robots[robot_idx, 0], 0, self.world_size_nmi)
             self.robots[robot_idx, 1] = np.clip(self.robots[robot_idx, 1], 0, self.world_size_nmi)
+
+            # Record position for trail
+            self.position_history[robot_idx].append((self.robots[robot_idx, 0], self.robots[robot_idx, 1]))
+            # Keep only recent history
+            if len(self.position_history[robot_idx]) > self.max_trail_length:
+                self.position_history[robot_idx].pop(0)
 
         # Update coverage
         self._update_coverage()
@@ -417,16 +430,15 @@ class MultiRobotSearchGame:
 
         return img
 
-    def render_weighted_coverage(self, save_path=None, figsize_multiplier=2.0):
+    def render_weighted_coverage(self, save_path=None):
         """
         Render the weighted coverage (SA * priority) with priority map overlay.
 
         Args:
             save_path: If provided, save image to this path
-            figsize_multiplier: Scale factor for output image size
 
         Returns:
-            PIL Image
+            PIL Image (full resolution, no scaling)
         """
         # Weighted coverage
         weighted = self.coverage * self.priority_map
@@ -439,20 +451,11 @@ class MultiRobotSearchGame:
         weighted_colored = self.cmap(weighted_flipped)[:, :, :3]  # RGB only
         img_array = (weighted_colored * 255).astype(np.uint8)
 
-        # Convert to PIL
+        # Convert to PIL (full resolution)
         img = Image.fromarray(img_array)
 
-        # Resize for larger output
-        if figsize_multiplier != 1.0:
-            new_size = (int(img.width * figsize_multiplier), int(img.height * figsize_multiplier))
-            img = img.resize(new_size, Image.Resampling.LANCZOS)
-            priority_flipped_resized = Image.fromarray((priority_flipped * 255).astype(np.uint8), mode='L')
-            priority_flipped_resized = priority_flipped_resized.resize(new_size, Image.Resampling.LANCZOS)
-            priority_gray = np.array(priority_flipped_resized)
-        else:
-            priority_gray = (priority_flipped * 255).astype(np.uint8)
-
         # Create priority map overlay (grayscale, mostly transparent)
+        priority_gray = (priority_flipped * 255).astype(np.uint8)
         priority_overlay = Image.fromarray(priority_gray, mode='L')
 
         # Convert to RGBA for transparency control
@@ -474,30 +477,61 @@ class MultiRobotSearchGame:
         img = Image.alpha_composite(img, priority_overlay)
         img = img.convert('RGB')
 
-        # Draw robots
+        # Draw trails and robots
         draw = ImageDraw.Draw(img)
 
         for robot_idx in range(self.num_robots):
+            # Draw trail (blue, fading)
+            history = self.position_history[robot_idx]
+            if len(history) > 1:
+                for i in range(len(history) - 1):
+                    x1_nmi, y1_nmi = history[i]
+                    x2_nmi, y2_nmi = history[i + 1]
+
+                    x1_px = int(x1_nmi / self.nmi_per_pixel)
+                    y1_px = self.grid_size - 1 - int(y1_nmi / self.nmi_per_pixel)
+                    x2_px = int(x2_nmi / self.nmi_per_pixel)
+                    y2_px = self.grid_size - 1 - int(y2_nmi / self.nmi_per_pixel)
+
+                    # Fade from oldest (transparent) to newest (opaque)
+                    age = len(history) - 1 - i
+                    alpha = int(255 * (1.0 - age / len(history)))
+                    # Convert to hex color with alpha
+                    # Use PIL's alpha by drawing on RGBA layer
+
+                    # For now, draw with decreasing opacity using overlay
+                    opacity = 1.0 - age / len(history)
+                    color_val = int(255 * opacity)
+                    draw.line([x1_px, y1_px, x2_px, y2_px],
+                             fill=(0, int(150 * opacity), int(255 * opacity)),
+                             width=2)
+
+            # Current robot position
             x_nmi, y_nmi, heading = self.robots[robot_idx]
-            x_px = int(x_nmi / self.nmi_per_pixel * figsize_multiplier)
-            # Flip y for rendering: y_nmi=0 should be at bottom of image
-            y_px = int((self.grid_size - 1 - y_nmi / self.nmi_per_pixel) * figsize_multiplier)
+            x_px = int(x_nmi / self.nmi_per_pixel)
+            y_px = self.grid_size - 1 - int(y_nmi / self.nmi_per_pixel)
 
-            # Robot body (cyan circle for visibility) - scale moderately with image size
-            robot_radius = int(5 * min(figsize_multiplier, 1.5))  # Cap scaling at 1.5x
-            draw.ellipse(
-                [x_px - robot_radius, y_px - robot_radius,
-                 x_px + robot_radius, y_px + robot_radius],
+            # Draw arrowhead pointing in direction of motion
+            arrow_length = 8
+            arrow_width = 5
+
+            # Arrow tip (front)
+            tip_x = x_px + arrow_length * np.cos(heading)
+            tip_y = y_px - arrow_length * np.sin(heading)
+
+            # Arrow base corners (perpendicular to heading)
+            perp_angle = heading + np.pi / 2
+            base_x1 = x_px - arrow_length * 0.5 * np.cos(heading) + arrow_width * np.cos(perp_angle)
+            base_y1 = y_px + arrow_length * 0.5 * np.sin(heading) - arrow_width * np.sin(perp_angle)
+            base_x2 = x_px - arrow_length * 0.5 * np.cos(heading) - arrow_width * np.cos(perp_angle)
+            base_y2 = y_px + arrow_length * 0.5 * np.sin(heading) + arrow_width * np.sin(perp_angle)
+
+            # Draw filled arrowhead (cyan)
+            draw.polygon(
+                [(tip_x, tip_y), (base_x1, base_y1), (base_x2, base_y2)],
                 fill=(0, 255, 255),
-                outline=(255, 255, 255),
-                width=max(2, int(2 * figsize_multiplier))
+                outline=(255, 255, 255)
             )
-
-            # Heading indicator (white line) - scale moderately with image size
-            line_length = int(10 * min(figsize_multiplier, 1.5))  # Cap scaling at 1.5x
-            end_x = x_px + line_length * np.cos(heading)
-            end_y = y_px - line_length * np.sin(heading)  # Negative because y rendering is flipped
-            draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=max(2, int(2 * figsize_multiplier)))
 
         if save_path:
             img.save(save_path)

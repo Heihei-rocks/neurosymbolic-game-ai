@@ -51,7 +51,7 @@ def run_episode(agent, game, policy_type='random', max_steps=30, save_gif=True):
 
     # Initial frame
     if save_gif:
-        img = game.render_weighted_coverage(figsize_multiplier=1.0)  # Normal size for GIF
+        img = game.render_weighted_coverage()  # Full resolution
         frames.append(np.array(img))
 
     for step in range(max_steps):
@@ -83,7 +83,7 @@ def run_episode(agent, game, policy_type='random', max_steps=30, save_gif=True):
 
         # Render
         if save_gif:
-            img = game.render_weighted_coverage(figsize_multiplier=1.0)  # Normal size for GIF
+            img = game.render_weighted_coverage()  # Full resolution
             frames.append(np.array(img))
 
         if done:
