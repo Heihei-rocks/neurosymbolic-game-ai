@@ -1,12 +1,31 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.15 alpha** 🏗️ *Early development*
+**v0.16 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.15 alpha
+## Release Notes v0.16 alpha
 
-**BREAKTHROUGH: PySR Symbolic Regression Now Works! 🎉**
+**NEW GAME: Multi-Robot Area Coverage! 🚁**
+
+Added a second game for testing neurosymbolic distillation on coordinated multi-agent systems:
+
+**Multi-Robot Search Game:**
+- 50×50 nmi continuous space (500×500 pixel grid)
+- 1-10 robots with 20 nmi sensor range, 90° FOV
+- Coordinated lattice ingress from south
+- Coverage decay (0.99) encourages revisiting
+- Score: Cumulative sum of coverage matrix (situational awareness value)
+- Multiple colormaps: inferno, plasma, viridis, bone, jet
+
+**Why this matters:**
+- More complex coordination problem than box collection
+- Multi-agent control (behavior controls all robots simultaneously)
+- Continuous state space vs discrete
+- Trade-offs between exploration and revisiting
+- Real-world application: surveillance, search & rescue, reconnaissance
+
+**Previous (v0.15 alpha):**
 
 **Fixed PySR approach - now produces working formulas:**
 - **Problem (v0.14):** Q-value regression found global patterns, scored 0 points
@@ -59,20 +78,25 @@ A_UP    = (nearest_angle × -32.68) × reward_counter
 
 ---
 
-## Overview
+## Games
 
-### Game Environment
+### 1. Box Collection Game (Original)
 - **32×32 grid** with randomly placed obstacles  
-- **50 green boxes** (+1 point each, reward starts at 100, decreases by 1 per turn)  
-- **5 red boxes** (-1 point each, currently **disabled** for clearer gameplay)  
-- **Actions**: UP, DOWN, LEFT, RIGHT  
-- **Goal**: Collect all green boxes before time runs out
+- **50 green boxes** (+1 point each, time pressure)  
+- Single agent navigation
+- Optimal: greedy nearest-neighbor (1306 points)
+- NN achieves: 1346 points (+40, 103%)
 
-## Game Visualization
+### 2. Multi-Robot Area Coverage (NEW v0.16)
+- **50×50 nmi continuous space** (500×500 grid)
+- **1-10 coordinated robots** with sensors
+- Lattice formation ingress from south
+- Coverage decay encourages revisiting
+- Score: Cumulative coverage sum over time
 
-![Game Board](output/game_visualization.png)
+![Multi-Robot Search](output/search_v2_final.png)
 
-*Grid showing agent start (blue), green boxes (+1), red boxes (-1), and obstacles*
+*6 robots (cyan) performing coordinated area search with 20 nmi sensor range*
 
 ## State Representation
 
@@ -206,14 +230,14 @@ A neural network was trained with:
 ## Quick Start
 
 ```bash
-# Run the complete pipeline
-python run_pipeline.py
-
-# Or run individual steps:
+# Box Collection Game
 python src/train_rl.py              # Train RL agent (~3-5 min)
 python src/distill_improved.py      # Extract decision tree rules
 python src/distill_with_pysr_v3.py  # PySR symbolic regression (advantage-based)
 python src/compare_final.py         # Compare all 4 policies
+
+# Multi-Robot Search Game
+python src/game_search.py           # Demo coordinated search behavior
 ```
 
 ## Core Policies
@@ -347,6 +371,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.16 alpha**: Multi-robot area coverage game with coordinated control
 - **v0.15 alpha**: PySR symbolic regression fixed with advantage-based formulas (1306 points)
 - **v0.14 alpha**: RL agent surpasses greedy heuristic (1346 vs 1306)
 - **v0.13 alpha**: Enhanced state representation (22 features), reward shaping
