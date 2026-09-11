@@ -15,7 +15,13 @@ class GridGame:
         self.obstacles = set()
 
     def get_state(self):
-        """12 features: pos, nearby boxes, green count, dist to nearest green."""
+        """
+        Enhanced state with 16 features: position, nearby boxes, remaining, distance, and DIRECTION to nearest green.
+
+        Returns:
+            numpy array [pos_x, pos_y, green_N/S/E/W, red_N/S/E/W, remaining, dist,
+                         nearest_dx, nearest_dy, nearest_angle, nearest_manhattan]
+        """
         gn = int((self.x, self.y-1) in self.green and (self.x, self.y-1) not in self.collected_green)
         gs = int((self.x, self.y+1) in self.green and (self.x, self.y+1) not in self.collected_green)
         ge = int((self.x+1, self.y) in self.green and (self.x+1, self.y) not in self.collected_green)
@@ -24,15 +30,35 @@ class GridGame:
         rs = int((self.x, self.y+1) in self.red and (self.x, self.y+1) not in self.collected_red) if self.red_enabled else 0
         re = int((self.x+1, self.y) in self.red and (self.x+1, self.y) not in self.collected_red) if self.red_enabled else 0
         rw = int((self.x-1, self.y) in self.red and (self.x-1, self.y) not in self.collected_red) if self.red_enabled else 0
-        
+
         greens = [(gx, gy) for gx, gy in self.green if (gx, gy) not in self.collected_green]
         if greens:
             gx, gy = min(greens, key=lambda b: (b[0]-self.x)**2 + (b[1]-self.y)**2)
             dist = ((gx-self.x)**2 + (gy-self.y)**2)**0.5
+            # Direction to nearest green (normalized)
+            dx = (gx - self.x) / self.w  # Normalized delta x
+            dy = (gy - self.y) / self.h  # Normalized delta y
+            # Angle to nearest green (helps NN understand direction)
+            import math
+            angle = math.atan2(dy, dx) / math.pi  # Normalized to [-1, 1]
+            manhattan = (abs(gx - self.x) + abs(gy - self.y)) / (self.w + self.h)
         else:
             dist = 0
-        
-        return np.array([self.x/self.w, self.y/self.h, gn, gs, ge, gw, rn, rs, re, rw, len(self.green)-len(self.collected_green), dist/32], dtype=np.float32)
+            dx = 0
+            dy = 0
+            angle = 0
+            manhattan = 0
+
+        return np.array([
+            self.x/self.w, self.y/self.h,           # Position [0-1]
+            gn, gs, ge, gw,                         # Green adjacent [2-5]
+            rn, rs, re, rw,                         # Red adjacent [6-9]
+            len(self.green)-len(self.collected_green),  # Remaining [10]
+            dist/32,                                 # Euclidean distance [11]
+            dx, dy,                                  # Direction vector [12-13]
+            angle,                                   # Angle to target [14]
+            manhattan                                # Manhattan distance [15]
+        ], dtype=np.float32)
 
     def step(self, action):
         if self.done or self.reward_counter <= 0: return self.get_state(), 0, True, {}

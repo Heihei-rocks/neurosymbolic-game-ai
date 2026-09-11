@@ -44,7 +44,7 @@ class ReplayBuffer:
 class QLearningAgent:
     """Q-learning agent using neural network function approximator."""
 
-    def __init__(self, state_dim=12, n_actions=4, hidden_layers=(256, 128, 64)):
+    def __init__(self, state_dim=16, n_actions=4, hidden_layers=(256, 128, 64)):
         self.state_dim = state_dim
         self.n_actions = n_actions
         self.gamma = 0.95  # Discount factor
@@ -130,7 +130,7 @@ def train_agent(n_episodes=5000, max_steps=100, eval_every=100, verbose=True):
     import warnings
     warnings.filterwarnings('ignore', category=Warning)
 
-    agent = QLearningAgent(state_dim=12, n_actions=4, hidden_layers=(256, 128, 64))
+    agent = QLearningAgent(state_dim=16, n_actions=4, hidden_layers=(256, 128, 64))
 
     episode_rewards = []
     episode_scores = []

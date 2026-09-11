@@ -9,9 +9,13 @@ This project demonstrates how to use **neurosymbolic distillation** to convert a
 **Major Improvements:**
 - **Reinforcement Learning Training**: Replaced behavioral cloning with Q-learning + experience replay (5000 episodes)
 - **Deeper Neural Network**: Upgraded from (64,32) to (256,128,64) architecture (~35K parameters)
+- **Enhanced State Representation**: Added directional features (dx, dy, angle) to 16-feature state - **critical fix!**
 - **True Neurosymbolic Distillation**: Implemented decision tree + PySR symbolic regression to extract rules from trained NN
 - **Comprehensive Evaluation**: Added comparison framework for Random, Heuristic, RL Agent, and Distilled policies
 - **Better Progress Reporting**: Real-time training progress with epsilon, loss, and buffer metrics
+- **Fixed Epsilon Decay**: Now decays once per episode (0.9993 rate) instead of per training step
+
+**Critical Bug Fix:** Previous state representation only included distance to nearest green without direction information. Agent was essentially blind! Now includes direction vector (dx, dy), angle, and Manhattan distance so the NN knows **where to go**.
 
 **Previous (v0.12 alpha):**
 - Learning curve with game scores, high-res GIFs with text rendering
@@ -35,15 +39,19 @@ This project demonstrates how to use **neurosymbolic distillation** to convert a
 
 ## State Representation
 
-The agent observes a **12-feature state vector**:
+The agent observes a **16-feature state vector**:
 ```
-[pos_x, pos_y,                    # Normalized position [0,1]
- green_N, green_S, green_E, green_W,  # Green boxes adjacent
- red_N, red_S, red_E, red_W,      # Red boxes adjacent (0 when disabled)  
- remaining, dist_to_green]        # Boxes left + distance to nearest green
+[pos_x, pos_y,                          # Normalized position [0,1]
+ green_N, green_S, green_E, green_W,    # Green boxes adjacent (binary)
+ red_N, red_S, red_E, red_W,            # Red boxes adjacent (binary, 0 when disabled)
+ remaining,                              # Boxes left to collect
+ dist_to_green,                          # Euclidean distance to nearest green
+ nearest_dx, nearest_dy,                 # Direction vector to nearest green (normalized)
+ nearest_angle,                          # Angle to nearest green [-1, 1]
+ nearest_manhattan]                      # Manhattan distance to nearest green
 ```
 
-With **50 green boxes** on the board and red boxes disabled, the game rewards rapid collection through the time-pressure reward counter.
+**Key improvement (v0.13):** Added directional features (dx, dy, angle, manhattan) so the NN knows **which direction** to move toward the nearest green box, not just the distance. This was critical - without direction information, the agent was essentially blind beyond its immediate neighbors!
 
 ### Neurosymbolic Distillation (v0.13)
 
@@ -122,7 +130,7 @@ python src/game.py
 ## Neural Network Model
 
 A neural network was trained with:
-- **Input**: 12-state features (position, adjacent boxes, remaining boxes, distance)
+- **Input**: 16-state features (position, adjacent boxes, remaining, distance, **direction to nearest green**)
 - **Architecture**: 3 hidden layers of **256, 128, 64 neurons** (~35K parameters)
 - **Training Method**: Q-learning with experience replay (5000 episodes)
 - **Output**: Q-values for each action (UP/DOWN/LEFT/RIGHT)
