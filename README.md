@@ -17,20 +17,25 @@ Successfully trained a neural network to control coordinated multi-robot swarms:
 - Network architecture: (128, 64) hidden layers, 15 Q-values output
 - Training: 200 episodes, 30 steps each, completed in ~10 minutes
 
-**Performance:**
-- Final test score: **36,250** (priority-weighted coverage)
-- Epsilon decay: 1.0 → 0.367 (exploration to exploitation)
-- Loss improvement: 97K → 40K (stable convergence)
+**Performance (20 test games):**
+- Random baseline: **27,458 ± 2,678** (priority-weighted coverage)
+- Trained agent: **34,497 ± 3,379** (+25.6% improvement!)
+- Trained agent learns priority-aware coordination strategies
+
+**Visualizations:**
+![Swarm Training Progress](output/swarm_training_progress_v18.png)
+
+| Random Policy | Trained Policy |
+|---------------|----------------|
+| ![Random](output/swarm_random_v18.gif) | ![Trained](output/swarm_trained_v18.gif) |
+| 27,458 avg | 34,497 avg (+25.6%) |
+
+*3 robots performing priority-aware area coverage. Trained agent achieves significantly better scores.*
 
 **Next Steps:**
-- Visualize trained swarm behavior
-- Apply neurosymbolic distillation to extract interpretable coordination rules
 - Scale up to 6 robots on 500×500 grid
-
-**Why this matters:**
-- First successful RL training for multi-agent priority-aware coverage
-- State representation includes spatial reasoning (downsampled maps) + coordination (inter-robot distances)
-- Foundation for extracting symbolic multi-agent coordination policies
+- Apply neurosymbolic distillation to extract interpretable coordination rules
+- Compare with hand-coded heuristics
 
 **Previous (v0.17 alpha):**
 

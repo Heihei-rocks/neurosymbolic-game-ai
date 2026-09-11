@@ -8,7 +8,11 @@
       "Bash(git commit -m 'Fix sensor FOV direction and add priority map overlay to weighted view *)",
       "Bash(python src/train_swarm_rl.py)",
       "Bash(awk '{print $2, $9, $10}')",
-      "Bash(tee /tmp/swarm_training.log)"
+      "Bash(tee /tmp/swarm_training.log)",
+      "Bash(git commit -m ' *)",
+      "Bash(python src/plot_swarm_training.py)",
+      "Bash(python src/demo_swarm.py)",
+      "Bash(python src/compare_swarm.py)"
     ]
   }
 }
