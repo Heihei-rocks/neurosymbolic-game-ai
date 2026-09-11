@@ -72,30 +72,34 @@ The agent observes a **22-feature state vector**:
 - **Time pressure** (reward_counter): Agent learns to optimize under time constraints
 - **Reward shaping** (dist_delta): Dense feedback for moving closer to targets (+0.1) or farther (-0.1)
 
-### Neurosymbolic Distillation (v0.13)
+### Neurosymbolic Distillation (v0.14)
 
-**True distillation pipeline that extracts symbolic rules from trained neural networks.**
+**Complete distillation pipeline that extracts symbolic rules from trained neural networks.**
 
-The improved workflow:
+The workflow:
 1. **Train RL agent**: Q-learning with experience replay (5000 episodes) to learn optimal policy
 2. **Extract symbolic rules**: Three complementary methods:
-   - **Decision Trees**: Mimic NN with 95%+ fidelity, fully interpretable
-   - **PySR Symbolic Regression**: Find mathematical formulas for Q-values
+   - **Decision Trees**: Mimic NN with 100% fidelity, fully interpretable (18 leaf nodes, 7 levels)
+   - **PySR Symbolic Regression**: Find mathematical formulas for Q-values (see [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md))
    - **Pattern Mining**: Extract high-level strategic insights
-3. **Compare performance**: RL agent, distilled rules, greedy heuristic, and random baseline
+3. **Compare performance**: RL agent, distilled tree, symbolic formulas, greedy heuristic, and random baseline
 
 **Distillation Methods:**
 
 1. **Decision Tree Extraction** (`distill_improved.py`):
    - Collects (state, action) pairs from trained NN
    - Trains decision tree to mimic NN decisions
-   - Result: Human-readable if-then rules with 95%+ accuracy
+   - Result: Human-readable if-then rules with 100% accuracy
    - Fast inference without matrix multiplication
+   - **Performance: 1346 points (perfect NN match)**
 
 2. **Symbolic Regression with PySR**:
    - Finds mathematical expressions: Q(s,a) = f(position, greens, reds, ...)
    - Uses genetic programming to evolve equations
    - Balances accuracy vs complexity (parsimony)
+   - **Result**: Discovered formulas based on `remaining` boxes and `reward_counter`
+   - **Performance: 0 points** - formulas too simple, lack spatial awareness
+   - **Insight**: Simple math can't capture reactive behavior (see [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md))
 
 3. **Pattern Analysis**:
    - Mines state-action correlations
@@ -103,9 +107,12 @@ The improved workflow:
    - Example: "When green adjacent → move toward it (87%)"
 
 **Generated Files:**
-- `src/heuristics_distilled.py` - Extracted symbolic rules
+- `src/heuristics_distilled.py` - Extracted decision tree rules (100% fidelity)
 - `src/distilled_tree.joblib` - Decision tree model
 - `src/distillation_results.npz` - Analysis data
+- `src/SYMBOLIC_RULES.md` - PySR mathematical formulas
+- `src/heuristics_symbolic.py` - Symbolic policy implementation
+- [PYSR_ANALYSIS.md](PYSR_ANALYSIS.md) - Detailed analysis of why symbolic formulas fail
 
 The `behavior(state)` function in `src/heuristics.py` contains 5 neurosymbolic rules:
 
