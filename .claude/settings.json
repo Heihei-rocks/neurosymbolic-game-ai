@@ -5,7 +5,10 @@
       "Bash(python src/game_search.py)",
       "Bash(git commit -m 'v0.16 alpha: Add multi-robot area coverage game *)",
       "Bash(git commit -m 'v0.17 alpha: Priority map system for intelligent coverage allocation *)",
-      "Bash(git commit -m 'Fix sensor FOV direction and add priority map overlay to weighted view *)"
+      "Bash(git commit -m 'Fix sensor FOV direction and add priority map overlay to weighted view *)",
+      "Bash(python src/train_swarm_rl.py)",
+      "Bash(awk '{print $2, $9, $10}')",
+      "Bash(tee /tmp/swarm_training.log)"
     ]
   }
 }

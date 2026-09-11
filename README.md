@@ -1,30 +1,40 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.17 alpha** 🏗️ *Early development*
+**v0.18 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.17 alpha
+## Release Notes v0.18 alpha
 
-**Multi-Robot Search Game Enhanced! 🎯**
+**Multi-Robot Swarm RL Training Complete! 🤖**
 
-Major improvements to the coordinated search game:
+Successfully trained a neural network to control coordinated multi-robot swarms:
 
-**Priority Map System:**
-- Gaussian mixture model creates 5 random hotspots (high-value regions)
-- Score = Σ(Coverage × Priority) - robots must seek high-priority areas
-- Creates realistic intelligence, surveillance, reconnaissance (ISR) scenario
+**Training Infrastructure:**
+- Q-learning with experience replay for 3-robot swarm
+- State representation (191 features): robot positions/headings, 8×8 downsampled coverage/priority maps, inter-robot distances, direction to high-priority targets
+- Action space: 5 discrete actions per robot (turn left/right, straight, speed up/down)
+- Network architecture: (128, 64) hidden layers, 15 Q-values output
+- Training: 200 episodes, 30 steps each, completed in ~10 minutes
 
-**Formation Changes:**
-- Robots start in tight clump (not lattice) at bottom center
-- Decay rate increased to 0.97 (3% per timestep) - forces active revisiting
-- More challenging coordination problem
+**Performance:**
+- Final test score: **36,250** (priority-weighted coverage)
+- Epsilon decay: 1.0 → 0.367 (exploration to exploitation)
+- Loss improvement: 97K → 40K (stable convergence)
+
+**Next Steps:**
+- Visualize trained swarm behavior
+- Apply neurosymbolic distillation to extract interpretable coordination rules
+- Scale up to 6 robots on 500×500 grid
 
 **Why this matters:**
-- Robots must learn priority-aware coverage allocation
-- Trade-off: cover everywhere vs focus on hotspots
-- Decay forces dynamic behavior (can't just sweep once)
-- Real-world: high-value targets, surveillance priorities
+- First successful RL training for multi-agent priority-aware coverage
+- State representation includes spatial reasoning (downsampled maps) + coordination (inter-robot distances)
+- Foundation for extracting symbolic multi-agent coordination policies
+
+**Previous (v0.17 alpha):**
+
+Priority map system with Gaussian mixture hotspots, clump formation, 0.97 decay rate.
 
 ![Priority Map](output/search_v3_priority_map.png)
 *Gaussian mixture priority map - bright areas are high-value regions*
@@ -395,6 +405,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.18 alpha**: Multi-robot swarm RL training complete (3 robots, 50×50 grid, 36K score)
 - **v0.17 alpha**: Priority map system (Gaussian mixture hotspots), clump formation, 0.97 decay
 - **v0.16 alpha**: Multi-robot area coverage game with coordinated control
 - **v0.15 alpha**: PySR symbolic regression fixed with advantage-based formulas (1306 points)
