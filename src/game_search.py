@@ -245,8 +245,11 @@ class MultiRobotSearchGame:
                     self.coverage[ty, tx] = 1.0
                     continue
 
-                # FIXED: angle_to_target in image coordinates (y-axis points down)
-                angle_to_target = np.arctan2(-dy, dx)  # Negative dy because y increases downward in image
+                # Calculate angle to target in standard coordinates
+                # In coverage grid: y increases downward (y=0 at top)
+                # In game coords: heading=0 is East, heading=π/2 is North (increasing y)
+                # So dy positive in grid means target is south of robot
+                angle_to_target = np.arctan2(dy, dx)  # dy positive = south in grid = target below
 
                 # Angle difference from heading
                 angle_diff = angle_to_target - heading
@@ -480,21 +483,21 @@ class MultiRobotSearchGame:
             # Flip y for rendering: y_nmi=0 should be at bottom of image
             y_px = int((self.grid_size - 1 - y_nmi / self.nmi_per_pixel) * figsize_multiplier)
 
-            # Robot body (cyan circle for visibility) - larger for bigger image
-            robot_radius = int(10 * figsize_multiplier)
+            # Robot body (cyan circle for visibility) - scale moderately with image size
+            robot_radius = int(5 * min(figsize_multiplier, 1.5))  # Cap scaling at 1.5x
             draw.ellipse(
                 [x_px - robot_radius, y_px - robot_radius,
                  x_px + robot_radius, y_px + robot_radius],
                 fill=(0, 255, 255),
                 outline=(255, 255, 255),
-                width=int(4 * figsize_multiplier)
+                width=max(2, int(2 * figsize_multiplier))
             )
 
-            # Heading indicator (white line) - longer for bigger image
-            line_length = int(20 * figsize_multiplier)
+            # Heading indicator (white line) - scale moderately with image size
+            line_length = int(10 * min(figsize_multiplier, 1.5))  # Cap scaling at 1.5x
             end_x = x_px + line_length * np.cos(heading)
             end_y = y_px - line_length * np.sin(heading)  # Negative because y rendering is flipped
-            draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=int(4 * figsize_multiplier))
+            draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=max(2, int(2 * figsize_multiplier)))
 
         if save_path:
             img.save(save_path)

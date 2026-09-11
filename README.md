@@ -1,14 +1,34 @@
 # Neurosymbolic Game AI Distillation
 
-**v0.18 alpha** 🏗️ *Early development*
+**v0.19 alpha** 🏗️ *Early development*
 
 This project demonstrates how to use **neurosymbolic distillation** to convert a trained neural network's game-playing policy into human-readable symbolic rules (heuristics).
 
-## Release Notes v0.18 alpha
+## Release Notes v0.19 alpha
 
-**Multi-Robot Swarm RL Training Complete! 🤖**
+**Swarm Rendering Fixes! 🔧**
 
-Successfully trained a neural network to control coordinated multi-robot swarms:
+Fixed critical bugs in multi-robot visualization and physics:
+
+**Rendering Corrections:**
+- Fixed coordinate system: y=0 now at bottom (Cartesian), platforms start at bottom and move upward
+- Fixed sensor FOV direction: sensors now point forward in direction of motion (not backward!)
+- Robot icons properly scaled: 5px radius (not huge 10px) for clean animations
+- Boundary behavior: platforms clamp at edges (no wrap-around teleportation)
+
+**Sensor Physics:**
+- Corrected angle calculation in `_add_fov_coverage()`: `arctan2(dy, dx)` matches game coordinate system
+- heading=π/2 (North) now correctly illuminates cells in front (increasing y_nmi)
+- FOV cone properly aligned with platform motion direction
+
+**Why this matters:**
+- Sensors were pointing backward - completely wrong coverage patterns!
+- Coordinate system mismatch caused platforms to appear at top when they should be at bottom
+- These fixes are critical for training convergence and interpretable visualizations
+
+**Previous (v0.18 alpha):**
+
+Multi-robot swarm RL training complete (3 robots, 50×50 grid, 34K score, +25.6% vs random)
 
 **Training Infrastructure:**
 - Q-learning with experience replay for 3-robot swarm
@@ -410,6 +430,7 @@ neurosymbolic-game-ai/
 
 ## Version History
 
+- **v0.19 alpha**: Fixed sensor FOV direction (was backward!), coordinate system (y=0 at bottom), boundary clamping, robot icon sizing
 - **v0.18 alpha**: Multi-robot swarm RL training complete (3 robots, 50×50 grid, 36K score)
 - **v0.17 alpha**: Priority map system (Gaussian mixture hotspots), clump formation, 0.97 decay
 - **v0.16 alpha**: Multi-robot area coverage game with coordinated control
