@@ -287,9 +287,9 @@ class MultiRobotSearchGame:
             self.robots[robot_idx, 0] += dx
             self.robots[robot_idx, 1] += dy
 
-            # Wrap around boundaries (toroidal world)
-            self.robots[robot_idx, 0] = self.robots[robot_idx, 0] % self.world_size_nmi
-            self.robots[robot_idx, 1] = self.robots[robot_idx, 1] % self.world_size_nmi
+            # Clamp to boundaries (no wrap-around)
+            self.robots[robot_idx, 0] = np.clip(self.robots[robot_idx, 0], 0, self.world_size_nmi)
+            self.robots[robot_idx, 1] = np.clip(self.robots[robot_idx, 1], 0, self.world_size_nmi)
 
         # Update coverage
         self._update_coverage()
@@ -354,8 +354,9 @@ class MultiRobotSearchGame:
         Returns:
             PIL Image
         """
-        # Apply colormap to coverage
-        coverage_colored = self.cmap(self.coverage)[:, :, :3]  # RGB only
+        # Apply colormap to coverage (flip vertically so y=0 is at bottom)
+        coverage_flipped = np.flipud(self.coverage)
+        coverage_colored = self.cmap(coverage_flipped)[:, :, :3]  # RGB only
         img_array = (coverage_colored * 255).astype(np.uint8)
 
         # Convert to PIL for drawing robots
@@ -366,7 +367,8 @@ class MultiRobotSearchGame:
         for robot_idx in range(self.num_robots):
             x_nmi, y_nmi, heading = self.robots[robot_idx]
             x_px = int(x_nmi / self.nmi_per_pixel)
-            y_px = int(y_nmi / self.nmi_per_pixel)
+            # Flip y for rendering: y_nmi=0 should be at bottom of image
+            y_px = self.grid_size - 1 - int(y_nmi / self.nmi_per_pixel)
 
             # Robot body (cyan circle for visibility)
             robot_radius = 5
@@ -379,10 +381,11 @@ class MultiRobotSearchGame:
             )
 
             # Heading indicator (white line)
-            # FIXED: heading in image coordinates (y increases downward)
+            # heading=0 is East, heading=π/2 is North (up in game)
+            # Since y is flipped in rendering, negate sin component
             line_length = 10
             end_x = x_px + line_length * np.cos(heading)
-            end_y = y_px - line_length * np.sin(heading)  # Negative because y points down
+            end_y = y_px - line_length * np.sin(heading)  # Negative because y rendering is flipped
             draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=2)
 
         if save_path:
@@ -411,12 +414,13 @@ class MultiRobotSearchGame:
 
         return img
 
-    def render_weighted_coverage(self, save_path=None):
+    def render_weighted_coverage(self, save_path=None, figsize_multiplier=2.0):
         """
         Render the weighted coverage (SA * priority) with priority map overlay.
 
         Args:
             save_path: If provided, save image to this path
+            figsize_multiplier: Scale factor for output image size
 
         Returns:
             PIL Image
@@ -424,15 +428,28 @@ class MultiRobotSearchGame:
         # Weighted coverage
         weighted = self.coverage * self.priority_map
 
+        # Flip vertically so y=0 is at bottom
+        weighted_flipped = np.flipud(weighted)
+        priority_flipped = np.flipud(self.priority_map)
+
         # Apply colormap
-        weighted_colored = self.cmap(weighted)[:, :, :3]  # RGB only
+        weighted_colored = self.cmap(weighted_flipped)[:, :, :3]  # RGB only
         img_array = (weighted_colored * 255).astype(np.uint8)
 
         # Convert to PIL
         img = Image.fromarray(img_array)
 
+        # Resize for larger output
+        if figsize_multiplier != 1.0:
+            new_size = (int(img.width * figsize_multiplier), int(img.height * figsize_multiplier))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+            priority_flipped_resized = Image.fromarray((priority_flipped * 255).astype(np.uint8), mode='L')
+            priority_flipped_resized = priority_flipped_resized.resize(new_size, Image.Resampling.LANCZOS)
+            priority_gray = np.array(priority_flipped_resized)
+        else:
+            priority_gray = (priority_flipped * 255).astype(np.uint8)
+
         # Create priority map overlay (grayscale, mostly transparent)
-        priority_gray = (self.priority_map * 255).astype(np.uint8)
         priority_overlay = Image.fromarray(priority_gray, mode='L')
 
         # Convert to RGBA for transparency control
@@ -459,25 +476,25 @@ class MultiRobotSearchGame:
 
         for robot_idx in range(self.num_robots):
             x_nmi, y_nmi, heading = self.robots[robot_idx]
-            x_px = int(x_nmi / self.nmi_per_pixel)
-            y_px = int(y_nmi / self.nmi_per_pixel)
+            x_px = int(x_nmi / self.nmi_per_pixel * figsize_multiplier)
+            # Flip y for rendering: y_nmi=0 should be at bottom of image
+            y_px = int((self.grid_size - 1 - y_nmi / self.nmi_per_pixel) * figsize_multiplier)
 
-            # Robot body (cyan circle for visibility)
-            robot_radius = 5
+            # Robot body (cyan circle for visibility) - larger for bigger image
+            robot_radius = int(10 * figsize_multiplier)
             draw.ellipse(
                 [x_px - robot_radius, y_px - robot_radius,
                  x_px + robot_radius, y_px + robot_radius],
                 fill=(0, 255, 255),
                 outline=(255, 255, 255),
-                width=2
+                width=int(4 * figsize_multiplier)
             )
 
-            # Heading indicator (white line)
-            # FIXED: heading in image coordinates (y increases downward)
-            line_length = 10
+            # Heading indicator (white line) - longer for bigger image
+            line_length = int(20 * figsize_multiplier)
             end_x = x_px + line_length * np.cos(heading)
-            end_y = y_px - line_length * np.sin(heading)  # Negative because y points down
-            draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=2)
+            end_y = y_px - line_length * np.sin(heading)  # Negative because y rendering is flipped
+            draw.line([x_px, y_px, end_x, end_y], fill=(255, 255, 255), width=int(4 * figsize_multiplier))
 
         if save_path:
             img.save(save_path)
