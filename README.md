@@ -22,11 +22,15 @@ A_UP    = (nearest_angle × -32.68) × reward_counter
 ```
 
 **Performance hierarchy achieved:**
-- Random: 201 points
-- **Symbolic (Advantage)**: 1306 points ✅ (working neurosymbolic distillation!)
-- Greedy Heuristic: 1306 points
-- Decision Tree: 1346 points (100% NN fidelity)
-- RL Agent: 1346 points (103% of greedy)
+- Random: 201 points (baseline)
+- Greedy Heuristic: 1306 points (hand-coded nearest-neighbor)
+- **PySR Symbolic**: 1306 points ✅ (matches greedy - neurosymbolic distillation works!)
+- Neural Network: 1346 points (103% of greedy, +40 points)
+
+**Why this matters:**
+- PySR discovered human-readable math that matches expert intuition
+- Neural network learned superhuman strategies beyond greedy
+- Perfect progression: Random < Greedy ≈ Symbolic < NN
 
 **Previous (v0.14 alpha):**
 
@@ -199,16 +203,25 @@ A neural network was trained with:
 - Bellman equation updates: Q(s,a) ← r + γ·max Q(s',a')
 - Adaptive learning rate with Adam optimizer
 
-**Quick Start:**
+## Quick Start
+
 ```bash
-# Run complete pipeline (train + distill + evaluate)
+# Run the complete pipeline
 python run_pipeline.py
 
 # Or run individual steps:
-python src/train_rl.py           # Train RL agent (~3-5 min)
-python src/distill_improved.py   # Extract symbolic rules
-python src/compare_all.py        # Compare all policies
+python src/train_rl.py              # Train RL agent (~3-5 min)
+python src/distill_improved.py      # Extract decision tree rules
+python src/distill_with_pysr_v3.py  # PySR symbolic regression (advantage-based)
+python src/compare_final.py         # Compare all 4 policies
 ```
+
+## Core Policies
+
+1. **Random**: Baseline (201 points)
+2. **Greedy Heuristic**: Hand-coded nearest-neighbor (1306 points)
+3. **PySR Symbolic**: Mathematical formulas from neurosymbolic distillation (1306 points)
+4. **Neural Network**: Q-learning trained agent (1346 points)
 
 ## Training Progress
 
@@ -334,10 +347,9 @@ neurosymbolic-game-ai/
 
 ## Version History
 
-- **v0.12 alpha**: Learning curve with game scores, high-res GIFs with proper text rendering
-- **v0.11 alpha**: Learning curve visualization added, version update to 0.11
-- **v0.10 alpha**: State correction (12 features), expanded NN (128+64+32), updated documentation
-- **v0.09**: Initial 50-green box configuration
-- **v0.08**: Time pressure implementation
-- **v0.07**: First neural network training
-- **v0.01**: Initial prototype
+- **v0.15 alpha**: PySR symbolic regression fixed with advantage-based formulas (1306 points)
+- **v0.14 alpha**: RL agent surpasses greedy heuristic (1346 vs 1306)
+- **v0.13 alpha**: Enhanced state representation (22 features), reward shaping
+- **v0.12 alpha**: Learning curve visualization, high-res GIFs
+- **v0.11 alpha**: Version numbering system
+- **v0.10 alpha**: State correction, expanded NN architecture
