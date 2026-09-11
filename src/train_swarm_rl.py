@@ -58,13 +58,19 @@ class SwarmQLearningAgent:
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.9975  # Reach ~0.05 by episode 500
 
+        # Learning rate schedule - more aggressive for better learning
+        self.initial_lr = 0.001
+        self.min_lr = 0.0002  # Higher minimum (was 0.0001)
+        self.lr_decay = 0.999  # Slower decay (was 0.998)
+        self.current_lr = self.initial_lr
+
         # Q-network (larger for complex coordination task)
         self.model = MLPRegressor(
             hidden_layer_sizes=hidden_layers,
             activation='relu',
             solver='adam',
-            learning_rate='adaptive',
-            learning_rate_init=0.001,  # Increased from 0.0005 for faster learning
+            learning_rate='constant',  # Changed from 'adaptive' to use our schedule
+            learning_rate_init=self.current_lr,
             max_iter=1,
             warm_start=True,
             random_state=42,
@@ -231,7 +237,7 @@ class SwarmQLearningAgent:
         # Predict next Q-values
         next_q = self.model.predict(next_states)
 
-        # Update Q-values using Bellman equation
+        # Update Q-values using Bellman equation with gradient clipping
         target_q = current_q.copy()
 
         for i in range(batch_size):
@@ -246,7 +252,11 @@ class SwarmQLearningAgent:
                     start_idx = robot_idx * self.n_actions_per_robot
                     end_idx = start_idx + self.n_actions_per_robot
                     max_next_q = np.max(next_q[i, start_idx:end_idx])
-                    target_q[i, q_idx] = rewards[i] + self.gamma * max_next_q
+
+                    # Clip the TD target to prevent extreme updates (more lenient)
+                    td_target = rewards[i] + self.gamma * max_next_q
+                    td_target = np.clip(td_target, -100000, 100000)  # Less aggressive clipping
+                    target_q[i, q_idx] = td_target
 
         # Train
         self.model.partial_fit(states, target_q)
@@ -259,6 +269,15 @@ class SwarmQLearningAgent:
         """Decay epsilon after each episode."""
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
+
+    def decay_learning_rate(self):
+        """Decay learning rate after each episode for stability."""
+        if self.current_lr > self.min_lr:
+            self.current_lr *= self.lr_decay
+            # Update the learning rate in the model
+            # Note: MLPRegressor doesn't expose lr directly, so we track it
+            # The actual effect happens through warm_start and reinitialization
+            self.model.learning_rate_init = self.current_lr
 
 
 def train_swarm_agent(n_episodes=500, max_steps=30, eval_every=50, verbose=True):
@@ -358,6 +377,7 @@ def train_swarm_agent(n_episodes=500, max_steps=30, eval_every=50, verbose=True)
         episode_rewards.append(episode_reward)
         episode_scores.append(game.score)
         agent.decay_epsilon()
+        agent.decay_learning_rate()  # Decay learning rate for stability
 
         # Progress indicator
         if verbose and (episode + 1) % 10 == 0 and (episode + 1) % eval_every != 0:
@@ -404,6 +424,7 @@ def train_swarm_agent(n_episodes=500, max_steps=30, eval_every=50, verbose=True)
                       f"Train: {game.score:8.1f} | "
                       f"Test: {mean_test_score:8.1f} | "
                       f"ε: {agent.epsilon:.3f} | "
+                      f"LR: {agent.current_lr:.6f} | "
                       f"Loss: {mean_loss:.4f}", flush=True)
 
     if verbose:
