@@ -1,0 +1,32 @@
+Starting swarm RL training...
+======================================================================
+MULTI-ROBOT SWARM RL TRAINING
+======================================================================
+Episodes: 500
+Robots: 3
+State dimension: 218
+Architecture: (256, 128, 64)
+Actions per robot: 5
+Total Q-values: 15
+======================================================================
+
+  Episode   10 / 500  Episode   20 / 500  Episode   30 / 500  Episode   40 / 500                                                                                Episode   50/500 ( 10.0%) | Train: 566794.1 | Test: 2202531.2 | ε: 0.882 | LR: 0.000951 | Loss: 30691.5202
+  Episode   60 / 500  Episode   70 / 500  Episode   80 / 500  Episode   90 / 500                                                                                Episode  100/500 ( 20.0%) | Train: 1223649.4 | Test: 3798968.5 | ε: 0.779 | LR: 0.000905 | Loss: 77569.1204
+  Episode  110 / 500  Episode  120 / 500  Episode  130 / 500  Episode  140 / 500                                                                                Episode  150/500 ( 30.0%) | Train: 2301911.0 | Test: 3949556.5 | ε: 0.687 | LR: 0.000861 | Loss: 94495.0554
+  Episode  160 / 500  Episode  170 / 500  Episode  180 / 500  Episode  190 / 500                                                                                Episode  200/500 ( 40.0%) | Train: 2977277.5 | Test: 3744673.5 | ε: 0.606 | LR: 0.000819 | Loss: 108000.8392
+  Episode  210 / 500  Episode  220 / 500  Episode  230 / 500  Episode  240 / 500                                                                                Episode  250/500 ( 50.0%) | Train: 3469004.0 | Test: 4717103.0 | ε: 0.535 | LR: 0.000779 | Loss: 83703.0871
+  Episode  260 / 500  Episode  270 / 500  Episode  280 / 500  Episode  290 / 500                                                                                Episode  300/500 ( 60.0%) | Train: 3890091.8 | Test: 4976603.0 | ε: 0.472 | LR: 0.000741 | Loss: 72310.9193
+  Episode  310 / 500  Episode  320 / 500  Episode  330 / 500  Episode  340 / 500                                                                                Episode  350/500 ( 70.0%) | Train: 4060879.2 | Test: 4183098.0 | ε: 0.416 | LR: 0.000705 | Loss: 66956.4816
+  Episode  360 / 500  Episode  370 / 500  Episode  380 / 500  Episode  390 / 500                                                                                Episode  400/500 ( 80.0%) | Train: 4104907.5 | Test: 4852238.0 | ε: 0.367 | LR: 0.000670 | Loss: 60782.2731
+  Episode  410 / 500  Episode  420 / 500  Episode  430 / 500  Episode  440 / 500                                                                                Episode  450/500 ( 90.0%) | Train: 4124316.5 | Test: 4685337.0 | ε: 0.324 | LR: 0.000637 | Loss: 67916.5189
+  Episode  460 / 500  Episode  470 / 500  Episode  480 / 500  Episode  490 / 500                                                                                Episode  500/500 (100.0%) | Train: 4586522.5 | Test: 4814179.0 | ε: 0.286 | LR: 0.000606 | Loss: 74634.6710
+
+======================================================================
+TRAINING COMPLETE
+======================================================================
+Final epsilon: 0.2861
+Buffer size: 10000
+Final test score: 4814179.00
+
+✓ Model saved to src/swarm_model_rl.joblib
+✓ Training history saved to src/swarm_training_history.npz
