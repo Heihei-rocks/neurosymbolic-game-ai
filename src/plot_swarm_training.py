@@ -33,33 +33,35 @@ def plot_training_progress():
 
     # Plot scores
     ax.plot(train_episodes, train_scores, 'b-', alpha=0.3, linewidth=0.5, label='Training Score')
-    ax.plot(eval_episodes, eval_scores, 'r-o', linewidth=2, markersize=4, label='Evaluation Score (5 games avg)')
+    ax.plot(eval_episodes, eval_scores, 'r-o', linewidth=2, markersize=6, label='Test Score (20 games avg)', zorder=5)
 
     # Smoothed training curve
-    window = 10
+    window = 25
     if len(train_scores) >= window:
         smoothed = np.convolve(train_scores, np.ones(window)/window, mode='valid')
-        ax.plot(train_episodes[window-1:], smoothed, 'b-', linewidth=2, label=f'Training (smoothed, window={window})')
+        ax.plot(train_episodes[window-1:], smoothed, 'darkblue', linewidth=2, label=f'Training (smoothed, {window}-episode avg)')
+
+    # Add baseline reference
+    ax.axhline(y=eval_scores[0], color='gray', linestyle='--', linewidth=1.5, alpha=0.6, label=f'Baseline: {eval_scores[0]:,.0f}')
 
     ax.set_xlabel('Episode', fontsize=12)
     ax.set_ylabel('Score (Priority-Weighted Coverage)', fontsize=12)
-    ax.set_title('Multi-Robot Swarm RL Training Progress\n3 Robots, 50×50 Grid, Priority-Aware Coverage',
+    ax.set_title('v0.27 Alpha: Multi-Robot Swarm Training Progress\n20x Longer Episodes (3000 steps) + Enhanced Cognitive Features (218 state dims)',
                  fontsize=14, fontweight='bold')
-    ax.legend(loc='best', fontsize=10)
+    ax.legend(loc='lower right', fontsize=10)
     ax.grid(True, alpha=0.3)
 
-    # Add final score annotation
+    # Add improvement annotation
     final_eval = eval_scores[-1]
-    ax.annotate(f'Final: {final_eval:.0f}',
-                xy=(eval_episodes[-1], final_eval),
-                xytext=(eval_episodes[-1] - 30, final_eval + 2000),
-                fontsize=10, fontweight='bold',
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='yellow', alpha=0.7),
-                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.3', lw=1.5))
+    improvement_pct = 100 * (final_eval / eval_scores[0] - 1)
+    ax.text(0.98, 0.05, f'Final: {final_eval:,.0f}\n+{improvement_pct:.1f}% improvement',
+            transform=ax.transAxes, fontsize=11, fontweight='bold',
+            verticalalignment='bottom', horizontalalignment='right',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.9))
 
     plt.tight_layout()
-    plt.savefig('output/swarm_training_progress_v18.png', dpi=150, bbox_inches='tight')
-    print("✓ Training plot saved to output/swarm_training_progress_v18.png")
+    plt.savefig('output/swarm_training_progress_v27.png', dpi=150, bbox_inches='tight')
+    print("✓ Training plot saved to output/swarm_training_progress_v27.png")
 
     # Print statistics
     print("\n" + "="*60)

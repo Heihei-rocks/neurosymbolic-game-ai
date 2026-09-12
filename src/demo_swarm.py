@@ -27,7 +27,7 @@ def load_trained_agent():
     agent = SwarmQLearningAgent(
         state_dim=save_data['state_dim'],
         num_robots=save_data['num_robots'],
-        hidden_layers=(128, 64)
+        hidden_layers=(256, 128, 64)  # Match v27 training
     )
     agent.model = save_data['model']
     agent.epsilon = 0.0  # No exploration for demo
@@ -35,7 +35,7 @@ def load_trained_agent():
     return agent
 
 
-def run_episode(agent, game, policy_type='random', max_steps=30, save_gif=True):
+def run_episode(agent, game, policy_type='random', max_steps=150, save_gif=True):
     """
     Run one episode and optionally save as GIF.
 
@@ -43,7 +43,7 @@ def run_episode(agent, game, policy_type='random', max_steps=30, save_gif=True):
         agent: SwarmQLearningAgent or None for random
         game: MultiRobotSearchGame instance
         policy_type: 'random' or 'trained'
-        max_steps: Maximum steps
+        max_steps: Maximum steps (150 for v27 demo)
         save_gif: Whether to save frames as GIF
     """
     game.reset()
@@ -93,9 +93,12 @@ def run_episode(agent, game, policy_type='random', max_steps=30, save_gif=True):
 
     # Save GIF
     if save_gif and len(frames) > 0:
-        filename = f'output/swarm_{policy_type}_v18.gif'
-        imageio.mimsave(filename, frames, duration=0.2, loop=0)
-        print(f"✓ Saved {filename} (score: {score:.0f})")
+        filename = f'output/swarm_{policy_type}_v27.gif'
+        # Sample frames if too many (keep every 3rd frame for reasonable file size)
+        if len(frames) > 50:
+            frames = frames[::3]
+        imageio.mimsave(filename, frames, duration=0.15, loop=0)
+        print(f"✓ Saved {filename} (score: {score:.0f}, frames: {len(frames)})")
 
     return score
 
@@ -128,11 +131,11 @@ def main():
     )
 
     # Run random policy
-    print("Running random policy...")
-    random_score = run_episode(None, game, policy_type='random', max_steps=30, save_gif=True)
+    print("Running random policy (150 steps)...")
+    random_score = run_episode(None, game, policy_type='random', max_steps=150, save_gif=True)
 
     # Run trained policy (reset seed for fair comparison)
-    print("Running trained policy...")
+    print("Running trained policy (150 steps)...")
     game = MultiRobotSearchGame(
         world_size_nmi=50.0,
         grid_size=500,  # Full resolution
@@ -145,7 +148,7 @@ def main():
         num_priority_blobs=5,
         seed=42  # Same seed for fair comparison
     )
-    trained_score = run_episode(agent, game, policy_type='trained', max_steps=30, save_gif=True)
+    trained_score = run_episode(agent, game, policy_type='trained', max_steps=150, save_gif=True)
 
     # Summary
     print()

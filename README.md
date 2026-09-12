@@ -48,6 +48,24 @@ Major improvements to learning capability through extended missions and richer s
 ✅ **Enhanced exploration**: Coverage gradients helped discover high-value regions  
 ✅ **Stable convergence**: Performance stabilized at 4.7-5.0M in final 200 episodes
 
+**Visualizations:**
+
+![Swarm Training Progress v27](output/swarm_training_progress_v27.png)
+
+*Training curve showing +119% improvement over 500 episodes with enhanced cognitive features*
+
+| Random Policy (150 steps) | Trained Policy (150 steps) |
+|----------------------------|----------------------------|
+| ![Random v27](output/swarm_random_v27.gif) | ![Trained v27](output/swarm_trained_v27.gif) |
+| 1,587,308 | 4,569,488 (+187.9%!) |
+
+*3 robots performing priority-aware area coverage with 150-step missions. Trained agent demonstrates sophisticated coordination, spreading, and revisiting strategies learned from 20x longer training episodes.*
+
+**Key Observations from GIFs:**
+- **Random policy**: Erratic movement, poor coverage, robots cluster together
+- **Trained policy**: Coordinated spreading, strategic revisiting, efficient priority targeting
+- **Improvement**: +187.9% on 150-step mission (almost 3x better performance!)
+
 **Previous (v0.26 alpha):**
 
 **5x Longer Episodes: Better Long-Term Planning 🎯**
